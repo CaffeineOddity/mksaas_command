@@ -12,26 +12,18 @@ err() {
 }
 
 ##
-# 功能：交互读取输入
-# 参数：$1 prompt, $2 var_name, $3 default_value
-# 返回：通过引用变量写回
+# 功能：输出本次安装使用的默认配置
+# 参数：$1 cmd_name, $2 bin_dir
+# 返回：无
 ##
-prompt_input() {
-  local prompt="$1"
-  local var_name="$2"
-  local default_value="$3"
+print_install_defaults() {
+  local cmd_name="$1"
+  local bin_dir="$2"
 
-  local input=""
-  if [[ -n "$default_value" ]]; then
-    read -r -p "$prompt (默认: $default_value): " input
-    if [[ -z "$input" ]]; then
-      input="$default_value"
-    fi
-  else
-    read -r -p "$prompt: " input
-  fi
-
-  printf -v "$var_name" "%s" "$input"
+  printf "使用默认安装参数继续执行：\n"
+  printf "  命令名: %s\n" "$cmd_name"
+  printf "  bin 目录: %s\n" "$bin_dir"
+  printf "  确认安装: yes\n\n"
 }
 
 ##
@@ -91,27 +83,20 @@ main() {
   repo_dir="$(get_real_script_dir)"
 
   local cmd_name_default="mksaas"
-  local cmd_name=""
-  prompt_input "命令名" cmd_name "$cmd_name_default"
+  local cmd_name="$cmd_name_default"
   if [[ -z "$cmd_name" ]]; then
     err "命令名不能为空"
     exit 1
   fi
 
   local bin_dir_default="${HOME}/.local/bin"
-  local bin_dir=""
-  prompt_input "安装到哪个 bin 目录（需要在 PATH 中）" bin_dir "$bin_dir_default"
+  local bin_dir="$bin_dir_default"
   if [[ -z "$bin_dir" ]]; then
     err "bin 目录不能为空"
     exit 1
   fi
 
-  local confirm=""
-  prompt_input "确认安装？输入 yes 继续" confirm "yes"
-  if [[ "$confirm" != "yes" ]]; then
-    err "已取消"
-    exit 1
-  fi
+  print_install_defaults "$cmd_name" "$bin_dir"
 
   do_install "$repo_dir" "$bin_dir" "$cmd_name"
   print_path_hint "$bin_dir"
