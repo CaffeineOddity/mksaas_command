@@ -1,0 +1,632 @@
+{
+  "version": "1.0.0",
+  "project": {
+    "name": "my-saas",
+    "project_dir": "/absolute/path/to/my-saas",
+    "repo_url": "https://github.com/owner/my-saas.git",
+    "repo_type": "empty_repo",
+    "template_repo": "https://github.com/MkSaaSHQ/mksaas-template.git",
+    "template_branch": "main"
+  },
+  "steps": {
+    "init": {
+      "status": "completed",
+      "updated_at": "2026-06-23T12:00:00Z",
+      "applied": false,
+      "applied_at": null
+    },
+    "apply": {
+      "status": "pending",
+      "updated_at": null,
+      "applied": false,
+      "applied_at": null
+    }
+  },
+  "profiles": {
+    "test": {
+      "base_url": "http://localhost:3000",
+      "env_groups": {
+        "core": {
+          "NEXT_PUBLIC_BASE_URL": {
+            "value": "http://localhost:3000",
+            "sensitive": false,
+            "source": "prompt",
+            "required": true,
+            "description": "Application base URL"
+          }
+        },
+        "database": {
+          "DATABASE_URL": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": true,
+            "description": "Database connection string"
+          }
+        },
+        "better_auth": {
+          "BETTER_AUTH_SECRET": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt_or_generate",
+            "required": true,
+            "generate_if_empty": true,
+            "description": "Better Auth secret"
+          }
+        },
+        "github_oauth": {
+          "GITHUB_CLIENT_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "GitHub OAuth client ID"
+          },
+          "GITHUB_CLIENT_SECRET": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "GitHub OAuth client secret"
+          }
+        },
+        "google_oauth": {
+          "GOOGLE_CLIENT_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Google OAuth client ID"
+          },
+          "GOOGLE_CLIENT_SECRET": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Google OAuth client secret"
+          }
+        },
+        "email": {
+          "RESEND_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Resend API key"
+          }
+        },
+        "newsletter": {
+          "BEEHIIV_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Beehiiv API key"
+          },
+          "BEEHIIV_PUBLICATION_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Beehiiv publication ID"
+          }
+        },
+        "storage": {
+          "STORAGE_REGION": {
+            "value": "auto",
+            "sensitive": false,
+            "source": "default",
+            "required": false,
+            "description": "Storage region"
+          },
+          "STORAGE_BUCKET_NAME": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Storage bucket name"
+          },
+          "STORAGE_ACCESS_KEY_ID": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Storage access key ID"
+          },
+          "STORAGE_SECRET_ACCESS_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Storage secret access key"
+          },
+          "STORAGE_ENDPOINT": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Storage endpoint"
+          },
+          "STORAGE_PUBLIC_URL": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Storage public URL"
+          }
+        },
+        "payment": {
+          "STRIPE_SECRET_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe secret key"
+          },
+          "STRIPE_WEBHOOK_SECRET": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe webhook secret"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe monthly price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe yearly price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_LIFETIME": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe lifetime price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe credits basic price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe credits standard price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe credits premium price ID"
+          },
+          "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Stripe credits enterprise price ID"
+          }
+        },
+        "configurations": {
+          "DISABLE_IMAGE_OPTIMIZATION": {
+            "value": "false",
+            "sensitive": false,
+            "source": "default",
+            "required": false,
+            "description": "Disable image optimization"
+          },
+          "NEXT_PUBLIC_DEMO_WEBSITE": {
+            "value": "false",
+            "sensitive": false,
+            "source": "default",
+            "required": false,
+            "description": "Run as demo website"
+          }
+        },
+        "analytics": {
+          "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Google Analytics ID"
+          },
+          "NEXT_PUBLIC_UMAMI_WEBSITE_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Umami website ID"
+          },
+          "NEXT_PUBLIC_UMAMI_SCRIPT": {
+            "value": "https://cloud.umami.is/script.js",
+            "sensitive": false,
+            "source": "default",
+            "required": false,
+            "description": "Umami script URL"
+          },
+          "NEXT_PUBLIC_OPENPANEL_CLIENT_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "OpenPanel client ID"
+          },
+          "NEXT_PUBLIC_PLAUSIBLE_DOMAIN": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Plausible domain"
+          },
+          "NEXT_PUBLIC_PLAUSIBLE_SCRIPT": {
+            "value": "https://plausible.io/js/script.js",
+            "sensitive": false,
+            "source": "default",
+            "required": false,
+            "description": "Plausible script URL"
+          },
+          "NEXT_PUBLIC_AHREFS_WEBSITE_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Ahrefs website ID"
+          },
+          "NEXT_PUBLIC_SELINE_TOKEN": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Seline token"
+          },
+          "NEXT_PUBLIC_DATAFAST_WEBSITE_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "DataFast website ID"
+          },
+          "NEXT_PUBLIC_DATAFAST_DOMAIN": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "DataFast domain"
+          },
+          "NEXT_PUBLIC_POSTHOG_KEY": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "PostHog key"
+          },
+          "NEXT_PUBLIC_POSTHOG_HOST": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "PostHog host"
+          },
+          "NEXT_PUBLIC_CLARITY_PROJECT_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Clarity project ID"
+          }
+        },
+        "notification": {
+          "DISCORD_WEBHOOK_URL": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Discord webhook URL"
+          },
+          "FEISHU_WEBHOOK_URL": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Feishu webhook URL"
+          }
+        },
+        "affiliate": {
+          "NEXT_PUBLIC_AFFILIATE_AFFONSO_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Affonso affiliate ID"
+          },
+          "NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "PromoteKit affiliate ID"
+          }
+        },
+        "captcha": {
+          "NEXT_PUBLIC_TURNSTILE_SITE_KEY": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Turnstile site key"
+          },
+          "TURNSTILE_SECRET_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Turnstile secret key"
+          }
+        },
+        "crisp": {
+          "NEXT_PUBLIC_CRISP_WEBSITE_ID": {
+            "value": "",
+            "sensitive": false,
+            "source": "prompt",
+            "required": false,
+            "description": "Crisp website ID"
+          }
+        },
+        "cron_jobs": {
+          "CRON_JOBS_USERNAME": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Cron jobs username"
+          },
+          "CRON_JOBS_PASSWORD": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Cron jobs password"
+          }
+        },
+        "ai": {
+          "AI_GATEWAY_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "AI gateway API key"
+          },
+          "FAL_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "FAL API key"
+          },
+          "FIREWORKS_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Fireworks API key"
+          },
+          "OPENAI_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "OpenAI API key"
+          },
+          "REPLICATE_API_TOKEN": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Replicate API token"
+          },
+          "GOOGLE_GENERATIVE_AI_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Google Generative AI API key"
+          },
+          "DEEPSEEK_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "DeepSeek API key"
+          },
+          "OPENROUTER_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "OpenRouter API key"
+          }
+        },
+        "firecrawl": {
+          "FIRECRAWL_API_KEY": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": false,
+            "description": "Firecrawl API key"
+          }
+        }
+      }
+    },
+    "prod": {
+      "base_url": "https://your-domain.com",
+      "env_groups": {
+        "core": {
+          "NEXT_PUBLIC_BASE_URL": {
+            "value": "https://your-domain.com",
+            "sensitive": false,
+            "source": "prompt",
+            "required": true,
+            "description": "Application base URL"
+          }
+        },
+        "database": {
+          "DATABASE_URL": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt",
+            "required": true,
+            "description": "Database connection string"
+          }
+        },
+        "better_auth": {
+          "BETTER_AUTH_SECRET": {
+            "value": "",
+            "sensitive": true,
+            "source": "prompt_or_generate",
+            "required": true,
+            "generate_if_empty": true,
+            "description": "Better Auth secret"
+          }
+        }
+      }
+    }
+  },
+  "modules": {
+    "database": {
+      "provider": "neon",
+      "profiles": {
+        "test": {
+          "DATABASE_URL": {
+            "value": "",
+            "sensitive": true
+          }
+        },
+        "prod": {
+          "DATABASE_URL": {
+            "value": "",
+            "sensitive": true
+          }
+        }
+      }
+    },
+    "deploy": {
+      "provider": "vercel",
+      "prod_base_url": "https://your-domain.com"
+    },
+    "auth": {
+      "github": {
+        "enabled": true,
+        "docs_url": "https://mksaas.com/docs/auth#2-configure-github-oauth"
+      },
+      "google": {
+        "enabled": false,
+        "docs_url": "https://mksaas.com/docs/auth#3-configure-google-oauth"
+      }
+    },
+    "email": {
+      "provider": "resend"
+    },
+    "newsletter": {
+      "providers": [
+        "resend",
+        "beehiiv"
+      ]
+    },
+    "storage": {
+      "provider": "cloudflare_r2"
+    },
+    "payment": {
+      "provider": "stripe",
+      "plans": [
+        "pro_monthly",
+        "pro_yearly",
+        "lifetime",
+        "credits_basic",
+        "credits_standard",
+        "credits_premium",
+        "credits_enterprise"
+      ]
+    },
+    "analytics": {
+      "providers": [
+        "google",
+        "umami",
+        "openpanel",
+        "plausible",
+        "ahrefs",
+        "seline",
+        "datafast",
+        "posthog",
+        "clarity"
+      ]
+    },
+    "notification": {
+      "providers": [
+        "discord",
+        "feishu"
+      ]
+    },
+    "affiliate": {
+      "providers": [
+        "affonso",
+        "promotekit"
+      ]
+    },
+    "captcha": {
+      "provider": "turnstile"
+    },
+    "chatbox": {
+      "provider": "crisp"
+    },
+    "cronjobs": {
+      "enabled": false
+    },
+    "ai": {
+      "providers": [
+        "ai_gateway",
+        "fal",
+        "fireworks",
+        "openai",
+        "replicate",
+        "google_generative_ai",
+        "deepseek",
+        "openrouter"
+      ]
+    },
+    "firecrawl": {
+      "enabled": false
+    }
+  },
+  "artifacts": {
+    "env_test_file": ".env.test",
+    "env_prod_file": ".env.prod",
+    "default_env_file": ".env",
+    "secrets_test_file": ".mksaas/secrets.test.env",
+    "secrets_prod_file": ".mksaas/secrets.prod.env",
+    "steps_doc_file": "SETUP_NEXT_STEPS.md"
+  },
+  "apply": {
+    "dirty": true,
+    "last_run_at": null,
+    "last_result": null,
+    "last_applied_project_dir": null
+  },
+  "meta": {
+    "language": "zh-CN",
+    "platform": "macos"
+  }
+}
