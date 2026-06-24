@@ -12,8 +12,15 @@
     "init": {
       "status": "in_progress",
       "updated_at": "2026-06-23T12:00:00Z",
-      "env_groups_processed": ["core", "database", "better_auth"],
-      "env_groups_skipped": ["ai", "firecrawl"],
+      "env_groups_processed": [
+        "core",
+        "database",
+        "better_auth"
+      ],
+      "env_groups_skipped": [
+        "ai",
+        "firecrawl"
+      ],
       "apply_confirmed": false,
       "applied": false,
       "applied_at": null
@@ -558,8 +565,8 @@
     }
   },
   "artifacts": {
-    "env_test_file": ".env.test",
-    "env_prod_file": ".env.prod",
+    "env_test_file": ".mksaas/.env.test",
+    "env_prod_file": ".mksaas/.env.prod",
     "default_env_file": ".env",
     "steps_doc_file": "SETUP_NEXT_STEPS.md"
   },

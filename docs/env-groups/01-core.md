@@ -97,7 +97,7 @@ sequenceDiagram
 
 ## 9. 生成要求
 
-1. 写入 `.env.test` 与 `.env.prod`
+1. 写入 `.mksaas/.env.test` 与 `.mksaas/.env.prod`
 2. `.env` 的内容在 apply 时由用户选择同步 test 或 prod 后重建
 3. 作为最终 apply 的输入之一
 

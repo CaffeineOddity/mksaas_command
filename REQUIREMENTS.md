@@ -213,21 +213,24 @@
 ```mermaid
 flowchart TD
     A[执行 mksaas init] --> B[读取或初始化 setup-state.json]
-    B --> C[调用 mksaas project 采集仓库信息]
+    B --> C[调用 mksaas project 采集仓库信息并让本地目录就位]
     C --> D[逐个调用 mksaas env group，每步确认可跳过]
     D --> E[各命令读取已有值并确认是否修改]
     E --> F[回写 setup-state.json]
     F --> G{apply 前停一次确认}
     G -->|否| H[结束并等待后续单独执行 mksaas apply]
     G -->|是| I[执行 mksaas apply]
-    I --> J[校验 repo 与 env_groups 完整性]
-    J --> K[clone 项目 / 绑定远程 / push]
-    K --> L[全量重建 .env.test / .env.prod]
-    L --> N[询问 .env 同步 test 还是 prod 并删除重建]
-    N --> O[生成 SETUP_NEXT_STEPS.md]
+    I --> J[校验 env_groups 必填项]
+    J --> K[全量重建 .mksaas/.env.test / .mksaas/.env.prod]
+    K --> L[询问 .env 同步 test 还是 prod，复制到项目根 .env]
+    L --> M{should_push}
+    M -->|是| N[push 到远程]
+    M -->|否| O[跳过 push]
+    N --> P[生成 SETUP_NEXT_STEPS.md]
+    O --> P
 ```
 
-逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。当未采集 `project` 时，apply 跳过 clone/remote/push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项。
+逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项。
 
 ## 7. 初始化时序图
 
@@ -255,32 +258,37 @@ sequenceDiagram
     U->>C: 确认执行 apply
     C->>S: 调用 apply
     S->>J: 读取完整状态
-    C->>G: clone / 初始化模板 / 配置 origin / push
-    C->>F: 全量重建 env 文件并询问 .env 同步来源
-    C->>J: 回写已应用状态
+    S->>F: 全量重建 .mksaas/.env.* 并复制项目根 .env
+    opt should_push
+        S->>G: push 到远程
+    end
+    S->>J: 回写已应用状态
     C-->>U: 输出最终结果
 ```
 
 ## 8. 全局文件结构
 
-最终项目需要维护以下文件：
+`.mksaas/` 状态目录位于本地项目目录内（即 git 仓库根目录内），由 `mksaas project` 创建。最终项目需要维护以下文件：
 
 ```text
-.mksaas/project.yaml
-.mksaas/setup-state.json
-.env.test
-.env.prod
-.env
-SETUP_NEXT_STEPS.md
+tourismchina/                  ← 本地项目目录 = git 仓库根目录
+├── .mksaas/                   ← 状态目录，gitignore
+│   ├── project.yaml           ← 稳定的非敏感项目元信息
+│   ├── setup-state.json       ← 步骤状态与配置收集结果
+│   ├── .env.test              ← test 环境变量（apply 全量重建）
+│   └── .env.prod              ← prod 环境变量（apply 全量重建）
+├── .env                       ← 本地开发用，apply 时从 .mksaas/.env.<profile> 复制
+└── SETUP_NEXT_STEPS.md
 ```
 
 说明：
 
 1. `project.yaml` 用于保存稳定的非敏感项目元信息
 2. `setup-state.json` 用于保存步骤状态和配置收集结果
-3. `.env.*` 由统一生成步骤产出，包含全部环境变量，不再单独生成 secrets 文件
-4. `.mksaas/` 整个目录不纳入版本控制
-5. Git clone、remote 绑定、push 由最后一步统一执行
+3. `.env.test`、`.env.prod` 落点为 `.mksaas/`，由 apply 全量重建，包含全部环境变量，不再单独生成 secrets 文件
+4. `.env` 落点为项目代码根目录，供 `pnpm run dev` 等工具链读取，内容由 apply 时用户选择的 profile 复制而来
+5. `.mksaas/` 整个目录不纳入版本控制
+6. 本地项目目录就位（clone、模板初始化、建空目录）由 `mksaas project` 完成；push 由 `mksaas apply` 完成
 
 ## 9. 全局安全要求
 
@@ -290,7 +298,7 @@ SETUP_NEXT_STEPS.md
 
 要求：
 
-1. `.gitignore` 必须覆盖整个 `.mksaas/` 目录、`.env`、`.env.test`、`.env.prod`
+1. `.gitignore` 必须覆盖整个 `.mksaas/` 目录以及项目根 `.env`
 2. CLI 输出中不得打印完整密钥、连接串、token 等内容，以摘要形式展示
 3. 采集敏感字段（密钥、token、密码、webhook 等）时使用隐藏输入
 4. 不再单独生成 `secrets.*.env` 文件

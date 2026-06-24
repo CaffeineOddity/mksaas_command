@@ -97,7 +97,7 @@ sequenceDiagram
 
 ## 9. 生成要求
 
-1. 写入 `.env.test` 与 `.env.prod`
+1. 写入 `.mksaas/.env.test` 与 `.mksaas/.env.prod`
 2. 缺少必填连接串时不得执行最终 apply
 3. provider 选择写入 JSON 模块配置
 

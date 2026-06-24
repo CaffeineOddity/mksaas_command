@@ -99,7 +99,7 @@ sequenceDiagram
 
 1. 空值且允许自动生成时，在最终 apply 阶段生成
 2. 生成后回写 `.mksaas/setup-state.json`
-3. 写入 `.env.test` 与 `.env.prod`
+3. 写入 `.mksaas/.env.test` 与 `.mksaas/.env.prod`
 
 ## 10. 安全要求
 

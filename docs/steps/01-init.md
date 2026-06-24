@@ -40,7 +40,7 @@ mksaas init
 1. 完整流程：`mksaas init`，由编排器引导 `project → env×N → apply`
 2. 逐步流程：用户也可不走 `init`，直接单步执行 `mksaas env <group>`、`mksaas apply`，`project` 可选
 
-逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。当未采集 `project` 时，apply 跳过 clone/remote/push，仅生成 `.env.*`，要求当前目录已是有效项目。apply 只校验环境必填项是否齐全。
+逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目。apply 只校验环境必填项是否齐全。
 
 两种方式共享同一个 `.mksaas/setup-state.json`，状态互通。
 
