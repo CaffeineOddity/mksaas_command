@@ -6,8 +6,8 @@
 
 本步骤负责：
 
-1. 根据仓库策略执行 clone 或模板初始化
-2. 绑定远程并按需 push
+1. 根据仓库策略执行 clone 或模板初始化（仅当存在 `project` 仓库信息时）
+2. 绑定远程并按需 push（仅当存在 `project` 仓库信息时）
 3. 读取 JSON 中的环境信息并写入项目 `.env.*`
 4. 生成 `SETUP_NEXT_STEPS.md`
 5. 回写 `steps.apply` 和最终应用状态
@@ -29,14 +29,17 @@ mksaas apply
 
 `apply` 依赖以下信息已经在 JSON 中存在：
 
-1. `project` 中的仓库信息
-2. `profiles.<profile>.env_groups` 中的环境分组信息
-3. `modules` 中的 provider 和启用状态
+1. `profiles.<profile>.env_groups` 中的环境分组信息
+2. `modules` 中的 provider 和启用状态
+3. `project` 中的仓库信息（可选，缺失时跳过 Git 操作）
 
 说明：
 
 1. `apply` 不再向用户重复询问已经存在于 JSON 的信息
-2. 若发现字段缺失，应提示用户返回 `mksaas init` 或 `mksaas env <group>` 补全
+2. 若发现环境必填项缺失，应提示用户返回 `mksaas env <group>` 补全
+3. 逐步模式下，用户可任意搭配：任意单个或多个 `mksaas env <group>` 即可直接 `mksaas apply`，`project` 可选，无需走完整 `init` 流程，也无需采集全部分组
+4. apply 只校验环境必填项是否齐全，不强制要求所有 env 分组都已采集，也不强制要求 `project` 已采集
+5. 当 JSON 中无 `project` 仓库信息（或本地目录已是有效仓库）时，apply 跳过 clone、remote 绑定、push，仅生成 `.env.*`，此时要求当前目录或指定目录已是有效项目
 
 ## 4. 流程图
 
@@ -44,18 +47,20 @@ mksaas apply
 flowchart TD
     A[执行 mksaas apply] --> B[读取 setup-state.json]
     B --> C[汇总 repo 与 env 配置]
-    C --> D{是否缺失必填项}
-    D -->|是| E[提示返回 init 或 env-group 命令补全]
+    C --> D{环境必填项是否缺失}
+    D -->|是| E[提示返回 env-group 命令补全]
     D -->|否| F{用户是否确认执行}
     F -->|否| G[结束并返回修改步骤]
-    F -->|是| H[校验目录状态与 Git 状态]
-    H --> I[执行 clone 或模板初始化]
+    F -->|是| H{是否有 project 仓库信息}
+    H -->|是| I[执行 clone 或模板初始化]
     I --> J[配置 remote 并按需 push]
-    J --> K[全量重建 .env.test 与 .env.prod]
-    K --> L{询问 .env 同步 test 还是 prod}
-    L --> M[删除并按所选 profile 重建 .env]
-    M --> N[生成 SETUP_NEXT_STEPS.md]
-    N --> O[回写 steps.apply 与 apply 状态]
+    H -->|否| K[跳过 Git 操作，要求当前目录已是有效项目]
+    J --> L[全量重建 .env.test 与 .env.prod]
+    K --> L
+    L --> M{询问 .env 同步 test 还是 prod}
+    M --> N[删除并按所选 profile 重建 .env]
+    N --> O[生成 SETUP_NEXT_STEPS.md]
+    O --> P[回写 steps.apply 与 apply 状态]
 ```
 
 ## 5. 时序图
@@ -70,14 +75,18 @@ sequenceDiagram
 
     U->>C: mksaas apply
     C->>J: 读取完整配置
-    J-->>C: 返回 project、env_groups、modules
-    C->>C: 校验必填项与当前目录状态
-    alt 存在缺失字段
-        C->>U: 提示返回 mksaas init 或 mksaas env <group>
+    J-->>C: 返回 env_groups、modules（project 可选）
+    C->>C: 校验环境必填项与当前目录状态
+    alt 环境必填项缺失
+        C->>U: 提示返回 mksaas env <group> 补全
     else 字段完整
         C->>U: 展示将被应用的 repo 与 env 摘要
         U->>C: 确认执行
-        C->>G: clone / 初始化模板 / 配置远程 / push
+        alt 有 project 仓库信息
+            C->>G: clone / 初始化模板 / 配置远程 / push
+        else 无 project 仓库信息
+            C->>C: 跳过 Git 操作，要求当前目录已是有效项目
+        end
         C->>F: 全量重建 .env.test 与 .env.prod
         C->>U: 询问 .env 同步 test 还是 prod
         U->>C: 选择同步来源
@@ -109,17 +118,20 @@ sequenceDiagram
 
 建议执行顺序：
 
-1. 校验 JSON 必填项
+1. 校验环境必填项
 2. 准备本地项目目录
-3. 执行 clone 或模板初始化
-4. 配置 Git remote
-5. 按需 push 到远程
-6. 全量重建 `.env.test` 与 `.env.prod`
-7. 询问用户 `.env` 同步 `test` 还是 `prod`，删除并按所选 profile 重建 `.env`
-8. 生成 `SETUP_NEXT_STEPS.md`
-9. 回写 `setup-state.json` 的 `steps.apply` 和 `apply` 状态
+3. 若存在 `project` 仓库信息：执行 clone 或模板初始化
+4. 若存在 `project` 仓库信息：配置 Git remote
+5. 若存在 `project` 仓库信息：按需 push 到远程
+6. 若无 `project` 仓库信息：跳过 3~5，要求当前目录已是有效项目
+7. 全量重建 `.env.test` 与 `.env.prod`
+8. 询问用户 `.env` 同步 `test` 还是 `prod`，删除并按所选 profile 重建 `.env`
+9. 生成 `SETUP_NEXT_STEPS.md`
+10. 回写 `setup-state.json` 的 `steps.apply` 和 `apply` 状态
 
 ## 9. 仓库执行规则
+
+本节规则仅当 JSON 中存在 `project` 仓库信息时适用；若无 `project` 信息，apply 跳过全部 Git 操作，要求当前目录已是有效项目，仅做环境文件落地。
 
 ### 9.1 已有关联好项目仓库
 
@@ -142,8 +154,8 @@ sequenceDiagram
 
 要求：
 
-1. 若 `repo_url` 仍为空，则阻止执行
-2. 提示用户先回到 `mksaas init` 补全仓库信息
+1. 若 `repo_url` 仍为空，则跳过 Git 操作，进入纯环境落地模式
+2. 提示用户可回到 `mksaas project` 补全仓库信息后再执行带 Git 操作的 apply
 
 ## 10. 环境落地规则
 

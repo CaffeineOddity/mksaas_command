@@ -68,8 +68,9 @@
 
 `docs/steps/` 只保留两个真正的步骤文档：
 
-1. [01-初始化需求](docs/steps/01-init.md)
+1. [01-全流程初始化引导](docs/steps/01-init.md)
 2. [02-执行配置需求](docs/steps/02-apply.md)
+3. [03-项目信息采集](docs/steps/03-project.md)
 
 统一 JSON 示例文件：
 
@@ -77,15 +78,16 @@
 
 对应步骤命令建议如下：
 
-1. `mksaas init`
-2. `mksaas apply`
+1. `mksaas init`：全流程编排器，引导 `project → env×N → apply`
+2. `mksaas project`：单独采集项目与仓库信息
+3. `mksaas apply`：统一执行落地
 
 ## 4.1 文档分层原则
 
 为避免重复维护，本项目文档采用分层设计：
 
 1. `REQUIREMENTS.md` 只负责总览、原则、索引和总流程
-2. `docs/steps/` 只负责两个顶层步骤：`init` 和 `apply`
+2. `docs/steps/` 负责三个顶层步骤：`init`（编排）、`project`（项目采集）、`apply`（落地）
 3. `docs/env-groups/` 负责具体环境变量分组的字段定义、采集流程、分组命令、校验规则与安全要求
 4. `REQUIREMENTS.md` 中的“统一状态文件”章节是状态文件结构的唯一总览来源
 5. `docs/steps/02-apply.md` 是最终执行与落地规则的唯一真相来源
@@ -115,7 +117,7 @@
 
 建议的状态模型：
 
-1. `steps` 只保留 `init` 与 `apply`
+1. `steps` 包含 `init`（编排进度）、`project`（项目采集）、`apply`（落地执行）
 2. `profiles.<profile>.env_groups` 保存各环境分组字段
 3. `modules` 保存 provider、enabled、plans 等抽象配置
 4. `artifacts` 保存最终生成文件路径
@@ -206,15 +208,17 @@
 
 ## 6. 总体流程图
 
+`mksaas init` 作为编排器，引导 `project → env×N → apply`：
+
 ```mermaid
 flowchart TD
     A[执行 mksaas init] --> B[读取或初始化 setup-state.json]
-    B --> C[采集仓库信息]
-    C --> D[按需进入各 env-group 命令]
+    B --> C[调用 mksaas project 采集仓库信息]
+    C --> D[逐个调用 mksaas env group，每步确认可跳过]
     D --> E[各命令读取已有值并确认是否修改]
     E --> F[回写 setup-state.json]
-    F --> G{是否执行 apply}
-    G -->|否| H[结束并等待后续补全]
+    F --> G{apply 前停一次确认}
+    G -->|否| H[结束并等待后续单独执行 mksaas apply]
     G -->|是| I[执行 mksaas apply]
     I --> J[校验 repo 与 env_groups 完整性]
     J --> K[clone 项目 / 绑定远程 / push]
@@ -223,28 +227,34 @@ flowchart TD
     N --> O[生成 SETUP_NEXT_STEPS.md]
 ```
 
+逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。当未采集 `project` 时，apply 跳过 clone/remote/push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项。
+
 ## 7. 初始化时序图
 
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant C as mksaas CLI
+    participant C as mksaas init 编排器
+    participant S as 被编排步骤
     participant J as setup-state.json
     participant G as Git/GitHub
     participant F as 文件系统
 
     U->>C: 执行 mksaas init
     C->>J: 读取或初始化当前状态
-    C->>U: 展示仓库信息与已采集项
-    U->>C: 选择沿用或修改
-    C->>J: 回写 init 结果
-    U->>C: 执行 mksaas env <group>
-    C->>J: 读取分组已有值
-    C->>U: 展示已有值并确认是否修改
-    U->>C: 修改分组配置
-    C->>J: 回写 env_groups
-    U->>C: 执行 mksaas apply
-    C->>J: 读取完整状态
+    C->>S: 调用 project
+    C->>U: 展示仓库信息并确认
+    U->>C: 沿用或修改
+    C->>J: 回写 project 结果
+    loop 逐个 env 分组
+        C->>U: 展示分组已有值并确认
+        U->>C: 处理或跳过
+        C->>J: 回写 env_groups 或跳过标记
+    end
+    C->>U: apply 前确认
+    U->>C: 确认执行 apply
+    C->>S: 调用 apply
+    S->>J: 读取完整状态
     C->>G: clone / 初始化模板 / 配置 origin / push
     C->>F: 全量重建 env 文件并询问 .env 同步来源
     C->>J: 回写已应用状态
@@ -315,11 +325,12 @@ SETUP_NEXT_STEPS.md
 
 满足以下条件视为首版可用：
 
-1. 用户可以通过 `mksaas init` 完成初始化引导
-2. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令
-3. 每个命令执行后都会更新 `.mksaas/setup-state.json`
-4. 每个命令再次执行时都会先展示已有 JSON 信息并询问是否修改
-5. `mksaas apply` 能根据 JSON 完成 clone、push、`.env.test`/`.env.prod`/`.env` 落地
-6. 密钥、连接串、token 等内容不会被直接打印到终端
-7. macOS 下可安装为 `mksaas` 命令
-8. 不再依赖 shell 脚本作为运行入口
+1. 用户可以通过 `mksaas init` 完成全流程引导（project → env×N → apply，每步确认，env 可跳过，apply 前停确认）
+2. 用户可以通过 `mksaas project` 单独采集项目与仓库信息
+3. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令
+4. 每个命令执行后都会更新 `.mksaas/setup-state.json`
+5. 每个命令再次执行时都会先展示已有 JSON 信息并询问是否修改
+6. `mksaas apply` 能根据 JSON 完成 clone、push、`.env.test`/`.env.prod`/`.env` 落地
+7. 密钥、连接串、token 等内容不会被直接打印到终端
+8. macOS 下可安装为 `mksaas` 命令
+9. 不再依赖 shell 脚本作为运行入口

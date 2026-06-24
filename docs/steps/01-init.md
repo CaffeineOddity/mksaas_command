@@ -1,15 +1,16 @@
-# 步骤 01：初始化需求
+# 步骤 01：全流程初始化引导
 
 ## 1. 目标
 
-本步骤是唯一的初始化入口，负责建立 `.mksaas/setup-state.json`，并完成仓库与项目级基础信息的首次采集。
+本步骤是全流程初始化入口，作为编排器引导用户跑完完整流程。它本身不直接采集具体配置，而是按顺序串联 `project` → `env <group>` × N → `apply`，每一步都先确认、可选择跳过，apply 前停一次确认。
 
 说明：
 
-1. `init` 负责初始化状态文件与仓库配置
-2. `init` 不直接执行 clone、remote 绑定或 push
-3. 具体环境变量采集通过 `mksaas env <group> [--profile test|prod]` 完成，`--profile` 决定本次写入 `profiles.test` 还是 `profiles.prod`
-4. 真正的 Git 操作和环境落地在 `apply` 阶段统一执行
+1. `init` 是全流程编排器，按 `project → env1 → env2 → … → envX → apply` 顺序引导
+2. `init` 本身不直接执行 clone、remote 绑定、push 或环境落地，这些由被编排的步骤完成
+3. 每进入一个被编排步骤前，都先展示该步骤已有状态并让用户确认是否继续
+4. 用户可在任意一个 `env` 步骤选择跳过，不影响后续步骤
+5. 到达 `apply` 前，必须单独停一次让用户确认是否立即执行
 
 ## 2. 独立命令
 
@@ -19,58 +20,51 @@ mksaas init
 
 要求：
 
-1. 该命令可重复执行
+1. 该命令可重复执行，重复执行时按已有进度继续引导
 2. 启动时先读取 `.mksaas/setup-state.json`
-3. 若已有仓库与项目信息，先展示并让用户确认是否修改
-4. 若状态文件不存在，则初始化默认结构
-5. 修改完成后立即回写 JSON
+3. 若状态文件不存在，由第一个被编排步骤 `project` 负责初始化
+4. 全流程不强制一次跑完，可中途退出，下次再执行时从断点继续
 
-## 3. 负责范围
+## 3. 编排范围
 
-`init` 负责以下内容：
+`init` 按以下顺序编排：
 
-1. 初始化 `.mksaas/setup-state.json`
-2. 采集仓库来源与 `repo_url`
-3. 采集 `project_dir`、`template_repo`、`template_branch`
-4. 初始化 `steps.init` 与 `steps.apply` 状态
-5. 初始化 `profiles`、`modules`、`artifacts` 顶层结构
+1. `mksaas project`：初始化状态文件 + 采集仓库与项目信息
+2. `mksaas env <group> [--profile test|prod]`：逐个采集环境分组，每个分组都可确认或跳过
+3. `mksaas apply`：统一执行落地，apply 前停一次确认
 
-## 4. 输入
+被编排的 env 分组顺序与 `docs/env-groups/01~17` 一致，用户可跳过任意分组。
 
-用户输入信息：
+## 4. 两种使用方式
 
-1. 仓库来源
-2. `repo_url`
-3. 可选的本地目录
-4. 可选的模板仓库地址
-5. 可选的模板分支
+1. 完整流程：`mksaas init`，由编排器引导 `project → env×N → apply`
+2. 逐步流程：用户也可不走 `init`，直接单步执行 `mksaas env <group>`、`mksaas apply`，`project` 可选
 
-执行前输入来源：
+逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。当未采集 `project` 时，apply 跳过 clone/remote/push，仅生成 `.env.*`，要求当前目录已是有效项目。apply 只校验环境必填项是否齐全。
 
-1. `.mksaas/setup-state.json`
+两种方式共享同一个 `.mksaas/setup-state.json`，状态互通。
 
 ## 5. 流程图
 
 ```mermaid
 flowchart TD
     A[执行 mksaas init] --> B[读取 setup-state.json]
-    B --> C{文件是否存在}
-    C -->|否| D[初始化默认状态结构]
-    C -->|是| E[展示当前 project 与 steps.init]
-    D --> F[进入仓库采集流程]
-    E --> G{是否修改已有配置}
-    G -->|否| H[保留现有配置]
-    G -->|是| F
-    F --> I{选择仓库来源}
-    I -->|已关联好 MkSaaS 项目仓库| J[填写 repo_url 并标记 direct_clone]
-    I -->|已有空仓库| K[填写 repo_url 并标记 template_init]
-    I -->|还没有仓库| L[打开 GitHub 新建仓库页面并等待回填 repo_url]
-    L --> K
-    J --> M[校验仓库地址与本地目录]
-    K --> M
-    H --> N[回写 init 状态]
-    M --> N
-    N --> O[提示继续执行 mksaas env <group>]
+    B --> C[进入 project 步骤]
+    C --> D{确认是否执行 project}
+    D -->|否| E[提示 project 为必填，不可跳过]
+    D -->|是| F[执行 project 采集]
+    F --> G[下一个 env 分组]
+    G --> H{是否还有未处理 env 分组}
+    H -->|是| I{确认是否处理该分组}
+    I -->|是| J[执行 env 采集]
+    I -->|否| K[跳过该分组]
+    J --> G
+    K --> G
+    H -->|否| L[到达 apply 前确认]
+    L --> M{是否立即执行 apply}
+    M -->|否| N[结束并提示可稍后单独执行 mksaas apply]
+    M -->|是| O[执行 mksaas apply]
+    O --> P[回写 init 编排进度]
 ```
 
 ## 6. 时序图
@@ -78,108 +72,78 @@ flowchart TD
 ```mermaid
 sequenceDiagram
     participant U as 用户
-    participant C as CLI
+    participant C as init 编排器
+    participant S as 被编排步骤
     participant J as setup-state.json
-    participant G as GitHub
 
     U->>C: mksaas init
-    C->>J: 读取状态文件
-    alt 文件不存在
-        C->>J: 创建默认结构
-    else 文件已存在
-        J-->>C: 返回已有 project 与 init 状态
-        C->>U: 展示已有值并询问是否修改
+    C->>J: 读取状态文件与已有进度
+    C->>S: 调用 project
+    C->>U: 展示 project 已有状态并确认
+    U->>C: 确认执行 project
+    S->>J: 回写 project 配置
+    loop 逐个 env 分组
+        C->>U: 展示该分组已有状态并确认
+        U->>C: 处理 / 跳过
+        alt 处理
+            C->>S: 调用 env <group>
+            S->>J: 回写分组配置
+        else 跳过
+            C->>J: 记录该分组被跳过
+        end
     end
-    U->>C: 选择沿用或修改
-    alt 已经关联好 MkSaaS 项目仓库
-        U->>C: 输入 repo_url
-    else 已有空仓库
-        U->>C: 输入 repo_url
-    else 还没有仓库
-        C->>U: 提示前往 GitHub 创建空仓库
-        U->>G: 创建仓库
-        U->>C: 回填 repo_url
+    C->>U: 展示 apply 将执行的摘要
+    U->>C: 确认是否立即执行 apply
+    alt 确认执行
+        C->>S: 调用 apply
+        S->>J: 回写 apply 状态
+    else 暂不执行
+        C-->>U: 提示稍后单独执行 mksaas apply
     end
-    C->>J: 回写 project、steps.init 与默认顶层结构
-    C-->>U: 提示继续执行 mksaas env <group>
+    C->>J: 回写 init 编排进度
 ```
 
-## 7. 仓库来源
-
-CLI 需要支持以下三类仓库来源：
-
-1. 已经关联好 MkSaaS 项目仓库
-2. 已有空仓库
-3. 还没有仓库
-
-## 8. 行为要求
-
-### 8.1 通用交互
+## 7. 步骤确认规则
 
 要求：
 
-1. 启动时先读取 `.mksaas/setup-state.json`
-2. 如果当前步骤已有配置，先列出已有值
-3. 询问用户是否沿用已有配置
-4. 如果用户选择修改，再进入输入流程
-5. 修改后立即回写 JSON
-6. 提示用户继续通过 `mksaas env <group> [--profile test|prod]` 补全环境配置
+1. 每进入一个被编排步骤前，先展示该步骤在 JSON 中的已有状态
+2. `project` 为必填步骤，不可跳过；若用户拒绝，则终止本次编排
+3. 每个 `env` 分组都可选择处理或跳过，跳过不影响后续分组
+4. 到达 `apply` 前，单独停一次确认，apply 摘要中不得展示完整密钥、连接串、token
+5. 用户选择暂不执行 apply 时，编排正常结束并提示可稍后单独执行 `mksaas apply`
 
-### 8.2 已经关联好 MkSaaS 项目仓库
+## 8. 编排进度记录
 
-要求：
+`init` 在 JSON 中通过 `steps.init` 记录编排进度：
 
-1. 询问 `repo_url`
-2. 根据 `repo_url` 推导默认本地目录名
-3. 标记最终执行时采用直接 clone 策略
-4. 不重新初始化模板
+1. 已处理或跳过的 env 分组列表
+2. 是否已到达 apply 确认环节
+3. 是否已执行 apply
+4. 最近一次更新时间
 
-### 8.3 已有空仓库
-
-要求：
-
-1. 询问 `repo_url`
-2. 记录最终执行时要从 MkSaaS 模板初始化
-3. 记录模板远程名称为 `template`
-4. 记录目标远程名称为 `origin`
-5. 标记最终执行时需要 push
-
-### 8.4 还没有仓库
-
-要求：
-
-1. 打开 `https://github.com/new`
-2. 提示用户创建空私仓
-3. 用户创建完成后输入 `repo_url`
-4. 然后记录为空仓库初始化策略
+进度记录用于支持"中途退出、下次续跑"。
 
 ## 9. 输出
 
-本步骤结束后，必须在 JSON 状态文件中写入以下信息：
+本步骤结束后，JSON 状态文件中应包含：
 
-1. 仓库类型
-2. `repo_url`
-3. `repo_name`
-4. `project_dir`
-5. `template_repo`
-6. `template_branch`
-7. `apply_strategy`
-8. `should_push`
-9. `steps.init`
-10. `steps.apply`
+1. `steps.project`：由 `project` 步骤回写
+2. `profiles.<profile>.env_groups`：由各 `env` 步骤回写
+3. `steps.init`：编排进度
+4. `steps.apply`：若已执行 apply，由 apply 步骤回写
 
 ## 10. 异常处理
 
 需要处理以下异常：
 
-1. 本地目录已存在
-2. `repo_url` 为空
-3. JSON 文件损坏或字段不合法
-4. 用户拒绝确认已有配置
-5. 仓库地址格式错误
+1. 被编排步骤自身抛出的异常（沿用各步骤的异常处理）
+2. JSON 文件损坏或字段不合法
+3. 用户中途退出，需保证已采集的步骤状态已回写
+4. apply 前确认被拒绝，需正常结束并保留进度
 
 ## 11. 安全要求
 
-1. 不在日志中泄露带鉴权信息的仓库地址
-2. 不自动创建 GitHub 仓库
+1. 编排过程中不在日志泄露带鉴权信息的仓库地址
+2. apply 摘要中不得展示完整密钥、连接串、token、webhook
 3. 出错时给出明确中文提示
