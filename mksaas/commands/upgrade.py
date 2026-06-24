@@ -1,11 +1,12 @@
 """mksaas.commands.upgrade — 从本地构建产物升级。
 
 docs/build_install_upgrade_uninstall.md §7 为真相来源。
-仅从本地 dist 目录读取产物，不发起网络请求；原子替换保留符号链接。
+仅从本地 .build/dist 目录读取产物，不发起网络请求；原子替换保留符号链接。
 """
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
 
@@ -14,7 +15,7 @@ from mksaas.console import Console
 
 
 def _latest_product(dist_dir: Path) -> Path | None:
-    """在 dist 目录下按版本字符串排序取最大版本子目录。"""
+    """在构建产物目录下按版本字符串排序取最大版本子目录。"""
     if not dist_dir.is_dir():
         return None
     subs = [p for p in dist_dir.iterdir() if p.is_dir() and (p / "mksaas").is_file()]
@@ -49,9 +50,7 @@ def run_upgrade(args: Any, console: Console) -> int:
     tmp = exe.with_suffix(exe.suffix + ".tmp")
     tmp.write_bytes(target.read_bytes())
     tmp.replace(exe)
-    paths.version_info_path().write_text(
-        f'{{"installed_from": "{target.parent.name}"}}', encoding="utf-8"
-    )
+    _write_install_metadata(target.parent.name, dist)
     console.print(f"升级完成：{target.parent.name}（符号链接未变动）")
     return 0
 
@@ -62,6 +61,25 @@ def _read_installed_version() -> str | None:
     if not p.is_file():
         return None
     try:
-        return p.read_text(encoding="utf-8").strip()
+        raw = p.read_text(encoding="utf-8").strip()
     except OSError:
         return None
+    try:
+        data = json.loads(raw)
+    except json.JSONDecodeError:
+        return raw or None
+    if isinstance(data, dict):
+        value = data.get("installed_from")
+        return value if isinstance(value, str) and value else None
+    return raw or None
+
+
+def _write_install_metadata(installed_from: str, dist_dir: Path) -> None:
+    """回写安装元信息，保留已有 repo_root/build_dist_dir。"""
+    payload = paths.install_metadata()
+    payload["installed_from"] = installed_from
+    payload["build_dist_dir"] = str(dist_dir)
+    paths.version_info_path().write_text(
+        json.dumps(payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )

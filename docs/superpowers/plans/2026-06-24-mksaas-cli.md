@@ -208,7 +208,7 @@
 **测试用例：**
 - `read_version()` 解析；`version_string` debug=`-devN`/release 无后缀
 - `bump` patch/minor/major + build 重置 1
-- build.sh 默认 debug 路径 `dist/<v>-dev<b>/mksaas` 且 build+1；--release 不变；--bump 不产二进制；--minor 单用报错
+- build.sh 默认 debug 路径 `.build/dist/<v>-dev<b>/mksaas` 且 build+1；--release 不变；--bump 不产二进制；--minor 单用报错
 - PyInstaller 不可用→提示不静默失败
 
 **Commit:** `feat: 版本管理与 build.sh 构建`
@@ -225,7 +225,7 @@
 - paths：优先 /usr/local/bin 回退 ~/.local/bin
 - upgrade：产物不存在提示 build.sh；原子替换保留符号链接；版本排序取最大
 - uninstall：展示待删路径→确认→删；幂等；不删项目内 `.mksaas/`
-- install.sh 来源判定：dist 有产物→装产物；否则装源码入口
+- install.sh 来源判定：`.build/dist` 有产物→装产物；否则装源码入口
 
 **Commit:** `feat: 安装、升级与卸载生命周期`
 

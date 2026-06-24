@@ -125,4 +125,4 @@ F0–F3 为底层基石；F4–F9 为主线命令；F10–F11 为安装生命周
 
 1. `modules` 块（provider/enabled/plans）在首版只做最小落盘与透传，深度采集留后续——首版 env 命令聚焦 schema 变量采集，modules 仅 project 阶段初始化默认结构
 2. `SETUP_NEXT_STEPS.md` 内容模板在 F8 实现期确定
-3. install.sh 来源判定（dist 最新产物 vs 源码入口）在 F11 实现期按文档 §5 第 7 条固定
+3. install.sh 来源判定（`.build/dist` 最新产物 vs 源码入口）在 F11 实现期按文档 §5 第 7 条固定

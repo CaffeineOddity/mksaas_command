@@ -6,6 +6,8 @@ set -euo pipefail
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="${HOME}/.mksaas-cli"
 EXEC="$INSTALL_DIR/mksaas"
+CURRENT_PATH="$INSTALL_DIR/current"
+BUILD_DIST_DIR="$REPO_ROOT/.build/dist"
 
 usage() {
   cat <<'EOF' >&2
@@ -16,12 +18,13 @@ usage() {
 安装行为:
   - 安装目录: ~/.mksaas-cli（存放可执行文件与版本信息）
   - 符号链接: 优先 /usr/local/bin，不可写时回退 ~/.local/bin
-  - 安装来源: 默认安装 dist/ 下最新版本产物；否则安装源码入口（开发态）
+  - 安装来源: 默认安装源码入口（开发态）
+  - 指定版本: 仅在传入 --version 时安装 .build/dist/ 下的发布产物
   - 已存在安装时按升级语义覆盖旧版
 
 选项:
-  --version <版本字符串>  强制安装 dist/ 下指定版本子目录的产物
-                          （如 0.1.0-dev1、0.1.0），不再取最新；
+  --version <版本字符串>  安装 .build/dist/ 下指定版本子目录的产物
+                          （如 0.1.0-dev1、0.1.0），支持 onedir / onefile；
                           该版本不存在时报错退出
   -h, --help              显示本帮助
 
@@ -31,10 +34,11 @@ usage() {
   - 不自动修改 shell 配置文件
 
 示例:
-  ./install.sh                          # 安装最新产物（或源码入口）
-  ./install.sh --version 0.1.0-dev1     # 强制安装指定 debug 版本
-  ./install.sh --version 0.1.0          # 强制安装指定 release 版本
-  build.sh && ./install.sh              # 先构建产物再安装
+  ./install.sh                          # 安装源码入口（开发态）
+  ./install.sh --version 0.1.0-dev1     # 安装指定 debug 版本产物
+  ./install.sh --version 0.1.0          # 安装指定 release 版本产物
+  ./build.sh --release && ./install.sh --version 0.1.0
+                                        # 先构建 release 再安装
 
 升级/卸载也可通过已安装的命令完成:
   mksaas upgrade --local   # 从本地构建产物升级
@@ -59,70 +63,137 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-# 来源判定：dist 下最新版本产物优先；否则安装源码入口（开发态）
+# 解析安装来源：默认源码入口；指定版本时识别 onedir / onefile 产物。
 pick_source() {
-  # 指定版本：精确匹配 dist/<WANT_VERSION>/mksaas
-  if [[ -n "$WANT_VERSION" ]]; then
-    local target="$REPO_ROOT/dist/$WANT_VERSION/mksaas"
-    if [[ -f "$target" ]]; then
-      echo "$target"
-      return 0
-    fi
-    echo "错误: 指定版本产物不存在：dist/$WANT_VERSION/mksaas" >&2
-    echo "可用版本：" >&2
-    if [[ -d "$REPO_ROOT/dist" ]]; then
-      for d in "$REPO_ROOT/dist"/*/; do
-        [[ -f "${d}mksaas" ]] && echo "  $(basename "$d")" >&2
-      done
-    fi
-    exit 1
-  fi
-
-  # 默认：取最新版本
-  local latest
-  latest="$(python3 - "$REPO_ROOT" <<'PY'
-import sys, json
+  python3 - "$BUILD_DIST_DIR" "$WANT_VERSION" <<'PY'
+import sys
 from pathlib import Path
-root = Path(sys.argv[1])
-dist = root / "dist"
+dist = Path(sys.argv[1])
+want = sys.argv[2]
+
+if not want:
+    print("source\t\t")
+    raise SystemExit(0)
+
+product = dist / want / "mksaas"
+if product.is_dir() and (product / "mksaas").is_file():
+    print(f"onedir\t{product}\t{want}")
+    raise SystemExit(0)
+if product.is_file():
+    print(f"onefile\t{product}\t{want}")
+    raise SystemExit(0)
+
+print(f"错误: 指定版本产物不存在：.build/dist/{want}/mksaas", file=sys.stderr)
+print("可用版本：", file=sys.stderr)
 if dist.is_dir():
-    subs = [p for p in dist.iterdir() if p.is_dir() and (p / "mksaas").is_file()]
-    if subs:
-        def key(p):
-            s = p.name
-            import re
-            m = re.match(r"^(\d+)\.(\d+)\.(\d+)(?:-dev(\d+))?$", s)
-            if not m: return (0,0,0,1,0)
-            major,minor,patch = map(int, m.group(1,2,3))
-            dev = int(m.group(4)) if m.group(4) else None
-            return (major,minor,patch, 1 if dev is None else 0, dev or 0)
-        subs.sort(key=key)
-        print(subs[-1] / "mksaas")
-        sys.exit(0)
-print("")
+    for sub in sorted(p for p in dist.iterdir() if p.is_dir()):
+        container = sub / "mksaas"
+        if container.is_file() or (container.is_dir() and (container / "mksaas").is_file()):
+            print(f"  {sub.name}", file=sys.stderr)
+raise SystemExit(1)
 PY
-)"
-  if [[ -n "$latest" ]]; then
-    echo "$latest"
-  else
-    echo "source"
-  fi
 }
 
-SOURCE="$(pick_source)"
+write_exec_wrapper() {
+  local target_cmd="$1"
+  local tmp_exec="$EXEC.tmp"
+  cat > "$tmp_exec" <<EOF
+#!/usr/bin/env bash
+exec "$target_cmd" "\$@"
+EOF
+  chmod +x "$tmp_exec"
+  mv "$tmp_exec" "$EXEC"
+}
 
-mkdir -p "$INSTALL_DIR"
-if [[ "$SOURCE" == "source" ]]; then
-  # 开发态安装：写一个调用源码入口的包装脚本
-  cat > "$EXEC" <<EOF
+write_source_wrapper() {
+  local tmp_exec="$EXEC.tmp"
+  cat > "$tmp_exec" <<EOF
 #!/usr/bin/env bash
 exec python3 "$REPO_ROOT/mksaas/__main__.py" "\$@"
 EOF
-  chmod +x "$EXEC"
+  chmod +x "$tmp_exec"
+  mv "$tmp_exec" "$EXEC"
+}
+
+stage_product() {
+  local source_kind="$1"
+  local source_path="$2"
+  local stage_dir="$3"
+
+  rm -rf "$stage_dir"
+  mkdir -p "$stage_dir"
+  case "$source_kind" in
+    onefile)
+      cp "$source_path" "$stage_dir/mksaas"
+      chmod +x "$stage_dir/mksaas"
+      ;;
+    onedir)
+      cp -R "$source_path" "$stage_dir/mksaas"
+      chmod +x "$stage_dir/mksaas/mksaas"
+      ;;
+    *)
+      echo "错误: 不支持的产物类型：$source_kind" >&2
+      exit 1
+      ;;
+  esac
+}
+
+replace_current() {
+  local stage_dir="$1"
+  local backup_dir="${CURRENT_PATH}.bak"
+
+  rm -rf "$backup_dir"
+  if [[ -e "$CURRENT_PATH" ]]; then
+    mv "$CURRENT_PATH" "$backup_dir"
+  fi
+  if mv "$stage_dir" "$CURRENT_PATH"; then
+    rm -rf "$backup_dir"
+    return 0
+  fi
+  rm -rf "$CURRENT_PATH"
+  if [[ -e "$backup_dir" ]]; then
+    mv "$backup_dir" "$CURRENT_PATH"
+  fi
+  return 1
+}
+
+IFS=$'\t' read -r SOURCE_KIND SOURCE_PATH INSTALLED_FROM <<<"$(pick_source)"
+INSTALL_MODE="source"
+
+mkdir -p "$INSTALL_DIR"
+
+if [[ "$SOURCE_KIND" == "source" ]]; then
+  write_source_wrapper
+  rm -rf "$CURRENT_PATH" "${CURRENT_PATH}.bak" "${CURRENT_PATH}.tmp"
+  INSTALLED_FROM="source"
 else
-  cp "$SOURCE" "$EXEC"
-  chmod +x "$EXEC"
+  stage_product "$SOURCE_KIND" "$SOURCE_PATH" "${CURRENT_PATH}.tmp"
+  replace_current "${CURRENT_PATH}.tmp" || {
+    echo "错误: 替换安装目录中的发布产物失败" >&2
+    exit 1
+  }
+  if [[ "$SOURCE_KIND" == "onedir" ]]; then
+    write_exec_wrapper "$CURRENT_PATH/mksaas/mksaas"
+  else
+    write_exec_wrapper "$CURRENT_PATH/mksaas"
+  fi
+  INSTALL_MODE="$SOURCE_KIND"
 fi
+
+python3 - "$INSTALL_DIR/VERSION.installed" "$INSTALLED_FROM" "$REPO_ROOT" "$BUILD_DIST_DIR" "$INSTALL_MODE" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+path = Path(sys.argv[1])
+payload = {
+    "installed_from": sys.argv[2],
+    "repo_root": sys.argv[3],
+    "build_dist_dir": sys.argv[4],
+    "install_mode": sys.argv[5],
+}
+path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
+PY
 
 # 符号链接 PATH 优先级：/usr/local/bin 优先，不可写回退 ~/.local/bin
 LINK_DIR=""
@@ -135,6 +206,7 @@ fi
 ln -sf "$EXEC" "$LINK_DIR/mksaas"
 
 echo "已安装：$EXEC"
+echo "安装模式：$INSTALL_MODE"
 echo "符号链接：$LINK_DIR/mksaas"
 if [[ "$LINK_DIR" == "${HOME}/.local/bin" ]]; then
   case ":${PATH}:" in

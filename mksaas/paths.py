@@ -7,6 +7,7 @@ docs/build_install_upgrade_uninstall.md §2/§6 为真相来源。
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path
 
 
@@ -16,8 +17,15 @@ def install_dir() -> Path:
 
 
 def dist_dir() -> Path:
-    """构建产物目录（PyInstaller 单文件落点）。"""
-    return install_dir() / "dist"
+    """构建产物目录（优先来自安装元信息，其次回退到源码仓库 .build/dist）。"""
+    meta = install_metadata()
+    build_dist = meta.get("build_dist_dir")
+    if isinstance(build_dist, str) and build_dist:
+        return Path(build_dist)
+    repo_root = repo_root()
+    if repo_root is not None:
+        return repo_root / ".build" / "dist"
+    return install_dir() / ".build" / "dist"
 
 
 def executable_path() -> Path:
@@ -28,6 +36,30 @@ def executable_path() -> Path:
 def version_info_path() -> Path:
     """已安装版本信息文件。"""
     return install_dir() / "VERSION.installed"
+
+
+def install_metadata() -> dict:
+    """读取安装元信息；失败时返回空字典。"""
+    p = version_info_path()
+    if not p.is_file():
+        return {}
+    try:
+        data = json.loads(p.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    return data if isinstance(data, dict) else {}
+
+
+def repo_root() -> Path | None:
+    """尽量定位源码仓库根目录。"""
+    meta = install_metadata()
+    repo_root_str = meta.get("repo_root")
+    if isinstance(repo_root_str, str) and repo_root_str:
+        return Path(repo_root_str)
+    candidate = Path(__file__).resolve().parent.parent
+    if (candidate / "build.sh").is_file():
+        return candidate
+    return None
 
 
 def symlink_target() -> Path:

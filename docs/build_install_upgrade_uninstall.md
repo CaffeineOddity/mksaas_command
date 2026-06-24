@@ -11,7 +11,7 @@
 `install.sh`、`build.sh`、`mksaas upgrade --local`、`mksaas uninstall` 共享以下固定本地路径（具体路径值由实现固定，所有脚本与命令须读写同一处）：
 
 1. 安装目录：本地固定目录（如 `~/.mksaas-cli`），存放被安装的 `mksaas` 可执行文件及其版本信息
-2. 构建产物目录：本地固定目录（如 `~/.mksaas-cli/dist`），`build.sh` 产出的 PyInstaller 单文件二进制落点，`mksaas upgrade --local` 从此处读取
+2. 构建产物目录：仓库固定目录（如 `<repo>/.build/dist`），`build.sh` 产出的 PyInstaller 单文件二进制落点，`mksaas upgrade --local` 从此处读取
 3. 命令符号链接：`mksaas` 符号链接，指向安装目录内的可执行文件。PATH 目录优先级见 §6
 
 ## 3. 版本号约定与状态文件
@@ -25,12 +25,12 @@
 
 1. debug 构建：`<version>-dev<build>`，例如 `0.1.0-dev10`
 2. release 构建：`<version>`，不带 `-devN` 后缀，例如 `0.1.0`
-3. 产物存储路径：`dist/<产物版本字符串>/mksaas`，例如 `dist/0.1.0-dev10/mksaas`、`dist/0.1.0/mksaas`
+3. 产物存储路径：`.build/dist/<产物版本字符串>/mksaas`，例如 `.build/dist/0.1.0-dev10/mksaas`、`.build/dist/0.1.0/mksaas`
 
 ### 3.1 build 行为
 
-1. `build.sh` 默认为 debug 构建：读取 `version` 与 `build`，产出 `dist/<version>-dev<build>/mksaas`，构建完成后 `build` 字段自动 `+1` 并回写状态文件（即下一次 debug build 的 `N` 自动递增）
-2. `build.sh --release` 为 release 构建：读取 `version`，产出 `dist/<version>/mksaas`，**不**递增 `build` 字段
+1. `build.sh` 默认为 debug 构建：读取 `version` 与 `build`，产出 `.build/dist/<version>-dev<build>/mksaas`，构建完成后 `build` 字段自动 `+1` 并回写状态文件（即下一次 debug build 的 `N` 自动递增）
+2. `build.sh --release` 为 release 构建：读取 `version`，产出 `.build/dist/<version>/mksaas`，**不**递增 `build` 字段
 3. `build.sh --bump` 为版本号提升：默认提升 `PATCH` 位（`0.1.0` → `0.1.1`），`build` 重置为 `1`，回写状态文件后即结束（不产出二进制）
 4. `--bump` 可选位级：`--bump --minor` 提升 `MINOR` 位并清零 `PATCH`（`0.1.5` → `0.2.0`）；`--bump --major` 提升 `MAJOR` 位并清零 `MINOR` 与 `PATCH`（`1.2.3` → `2.0.0`）；不指定位级时默认 `PATCH`
 5. `--bump` 可与构建参数组合使用，如 `build.sh --bump` 后再 `build.sh`，或 `build.sh --bump --release` 一次性 bump 并产出 release 产物；组合时先 bump 回写状态，再按 `--release`/默认决定产物形态
@@ -38,9 +38,9 @@
 
 ### 3.2 示例
 
-1. 当前状态 `version=0.1.0 build=10` → `build.sh`（debug）产出 `dist/0.1.0-dev10/mksaas`，状态变为 `version=0.1.0 build=11`
+1. 当前状态 `version=0.1.0 build=10` → `build.sh`（debug）产出 `.build/dist/0.1.0-dev10/mksaas`，状态变为 `version=0.1.0 build=11`
 2. 当前状态 `version=0.1.0 build=10` → `build.sh --bump` 状态变为 `version=0.1.1 build=1`
-3. 当前状态 `version=0.1.1 build=1` → `build.sh --release` 产出 `dist/0.1.1/mksaas`，状态不变
+3. 当前状态 `version=0.1.1 build=1` → `build.sh --release` 产出 `.build/dist/0.1.1/mksaas`，状态不变
 4. 当前状态 `version=0.1.1 build=3` → `build.sh --bump --minor` 状态变为 `version=0.2.0 build=1`
 5. 当前状态 `version=1.2.3 build=5` → `build.sh --bump --major` 状态变为 `version=2.0.0 build=1`
 
@@ -50,7 +50,7 @@
 
 1. 仓库根目录提供 `build.sh`，用户执行 `bash build.sh` 构建产物
 2. 使用 PyInstaller 将 `mksaas` 打包为单文件二进制（`--onefile`），产物自包含 Python 运行时与依赖，目标机无需预装 Python 或第三方库
-3. 版本号与产物路径遵循 §3 约定：debug 产物落 `dist/<version>-dev<build>/mksaas`，release 产物落 `dist/<version>/mksaas`
+3. 版本号与产物路径遵循 §3 约定：debug 产物落 `.build/dist/<version>-dev<build>/mksaas`，release 产物落 `.build/dist/<version>/mksaas`
 4. 构建产物文件名固定为 `mksaas`，便于 `upgrade --local` 定位
 5. 支持参数：默认 debug 构建；`--release` 产出 release 产物；`--bump` 提升版本并重置 `build`（见 §3.1）；`--bump --minor` / `--bump --major` 指定位级；参数组合行为见 §3.1
 6. 构建前校验 PyInstaller 是否可用；不可用时给出安装提示（如 `pip install pyinstaller`），不静默失败
@@ -68,8 +68,8 @@
 4. 安装完成后打印 `mksaas` 的实际路径与符号链接位置，并提示用户确认 PATH 是否包含符号链接所在目录
 5. 安装失败时给出明确中文提示，不残留半安装状态（已写入的文件应回滚或提示用户手动清理）
 6. 不自动修改用户 shell 配置文件；若符号链接目录不在 PATH，仅提示用户自行加入
-7. install.sh 安装的来源：若本地已存在构建产物（`dist/` 下最新版本子目录），优先安装该产物；否则安装仓库源码入口（开发态安装）。具体来源判定由实现固定并文档化
-8. 支持 `install.sh --version <版本字符串>` 强制安装 `dist/` 下指定版本子目录的产物（如 `0.1.0-dev1`、`0.1.0`），不再取最新；该版本不存在时报错并列出可用版本后退出
+7. install.sh 安装的来源：若本地已存在构建产物（`.build/dist/` 下最新版本子目录），优先安装该产物；否则安装仓库源码入口（开发态安装）。具体来源判定由实现固定并文档化
+8. 支持 `install.sh --version <版本字符串>` 强制安装 `.build/dist/` 下指定版本子目录的产物（如 `0.1.0-dev1`、`0.1.0`），不再取最新；该版本不存在时报错并列出可用版本后退出
 
 ## 6. 命令符号链接 PATH 优先级
 

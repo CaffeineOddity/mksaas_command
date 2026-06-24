@@ -28,7 +28,7 @@ def _make_product(dist_root: Path, ver_str: str, content: str = "binary") -> Pat
 
 def test_upgrade_requires_local(tmp_path, monkeypatch):
     """upgrade 不带 --local → 报错。"""
-    monkeypatch.setattr(paths, "dist_dir", lambda: tmp_path / "dist")
+    monkeypatch.setattr(paths, "dist_dir", lambda: tmp_path / ".build" / "dist")
     c = FakeConsole(inputs=[])
     rc = upgrade_cmd.run_upgrade(make_args(local=False), c)
     assert rc != 0
@@ -37,7 +37,7 @@ def test_upgrade_requires_local(tmp_path, monkeypatch):
 
 def test_upgrade_no_product_prompts_build(tmp_path, monkeypatch):
     """产物不存在→提示先 build.sh。"""
-    monkeypatch.setattr(paths, "dist_dir", lambda: tmp_path / "dist")
+    monkeypatch.setattr(paths, "dist_dir", lambda: tmp_path / ".build" / "dist")
     c = FakeConsole(inputs=[])
     rc = upgrade_cmd.run_upgrade(make_args(), c)
     assert rc != 0
@@ -46,7 +46,7 @@ def test_upgrade_no_product_prompts_build(tmp_path, monkeypatch):
 
 def test_upgrade_latest_version_selected(tmp_path, monkeypatch):
     """版本排序取最大：dev10 > dev2。"""
-    dist = tmp_path / "dist"
+    dist = tmp_path / ".build" / "dist"
     _make_product(dist, "0.1.0-dev2", "old")
     _make_product(dist, "0.1.0-dev10", "new")
     monkeypatch.setattr(paths, "dist_dir", lambda: dist)
@@ -62,7 +62,7 @@ def test_upgrade_latest_version_selected(tmp_path, monkeypatch):
 
 def test_upgrade_atomic_replaces(tmp_path, monkeypatch):
     """原子替换：写临时文件再 rename，失败不破坏旧版。"""
-    dist = tmp_path / "dist"
+    dist = tmp_path / ".build" / "dist"
     _make_product(dist, "0.1.0-dev1", "newbin")
     install = tmp_path / "install"
     install.mkdir()
@@ -83,7 +83,7 @@ def test_upgrade_atomic_replaces(tmp_path, monkeypatch):
 
 def test_upgrade_declined_keeps_old(tmp_path, monkeypatch):
     """用户不确认→保留旧版。"""
-    dist = tmp_path / "dist"
+    dist = tmp_path / ".build" / "dist"
     _make_product(dist, "0.1.0-dev1", "newbin")
     install = tmp_path / "install"
     install.mkdir()

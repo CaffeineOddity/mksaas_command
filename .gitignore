@@ -1,1 +1,4 @@
 .omc
+.build/
+r/
+*.pyc

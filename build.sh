@@ -1,28 +1,36 @@
 #!/usr/bin/env bash
-# build.sh — 用 PyInstaller 构建 mksaas 单文件二进制。
+# build.sh — 用 PyInstaller 构建 mksaas 发布产物。
 # 真相来源：docs/build_install_upgrade_uninstall.md §3/§4
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 VERSION_FILE="$REPO_ROOT/VERSION"
 ENTRY="$REPO_ROOT/mksaas/__main__.py"
-DIST_ROOT="$REPO_ROOT/dist"
+BUILD_ROOT="$REPO_ROOT/.build"
+DIST_ROOT="$BUILD_ROOT/dist"
 
 RELEASE=0
 BUMP=0
 BUMP_LEVEL=""
+ONEFILE=0
 
 usage() {
   cat <<'EOF' >&2
 用法: build.sh [选项]
 
-用 PyInstaller 把 mksaas 打包为单文件二进制，产物落 dist/<版本>/mksaas。
+开发态默认继续走源码运行；`build.sh` 主要用于生成发布产物。
+release 默认使用 PyInstaller `--onedir`，仅在显式传入 `--onefile` 时生成单文件二进制。
 版本由仓库根 VERSION 文件的 version(MAJOR.MINOR.PATCH) 与 build(整数) 驱动。
 
 选项:
-  (无参数)        debug 构建：产物 dist/<version>-dev<build>/mksaas，
+  (无参数)        debug 构建：默认产出目录型产物
+                  .build/dist/<version>-dev<build>/mksaas/
+                  其可执行文件为 .../mksaas/mksaas
                   构建完成后 build 自动 +1 回写 VERSION
-  --release       release 构建：产物 dist/<version>/mksaas，不递增 build
+  --release       release 构建：默认产出目录型产物
+                  .build/dist/<version>/mksaas/
+                  不递增 build
+  --onefile       改为单文件产物：.build/dist/<version>/mksaas
   --bump          提升版本号并重置 build=1 后结束（默认 PATCH+1，不产二进制）
                   可与 --release 组合：先 bump 再产 release 产物
   --minor         与 --bump 组合：提升 MINOR 位并清零 PATCH（0.1.5 → 0.2.0）
@@ -30,8 +38,10 @@ usage() {
   -h, --help      显示本帮助
 
 示例:
-  build.sh                  # debug 构建，build+1
-  build.sh --release        # release 构建，build 不变
+  build.sh                  # debug 目录型构建，build+1
+  build.sh --release        # release 目录型构建，build 不变
+  build.sh --release --onefile
+                            # release 单文件构建
   build.sh --bump           # PATCH+1、build=1，不产二进制
   build.sh --bump --minor   # MINOR+1、build=1，不产二进制
   build.sh --bump --release # bump 后产 release 产物
@@ -44,6 +54,7 @@ EOF
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --release) RELEASE=1; shift ;;
+    --onefile) ONEFILE=1; shift ;;
     --bump) BUMP=1; shift ;;
     --minor) BUMP_LEVEL="minor"; shift ;;
     --major) BUMP_LEVEL="major"; shift ;;
@@ -106,20 +117,37 @@ fi
 PRODUCT_DIR="$DIST_ROOT/$PRODUCT_VERSION"
 PRODUCT="$PRODUCT_DIR/mksaas"
 
+if [[ "$ONEFILE" -eq 1 ]]; then
+  PYI_MODE="--onefile"
+  PRODUCT_EXEC="$PRODUCT"
+  PRODUCT_KIND="单文件"
+else
+  PYI_MODE="--onedir"
+  PRODUCT_EXEC="$PRODUCT/mksaas"
+  PRODUCT_KIND="目录型"
+fi
+
 # 校验 PyInstaller
 if ! python3 -c "import PyInstaller" 2>/dev/null; then
   echo "PyInstaller 不可用，请先安装：pip install pyinstaller" >&2
   exit 1
 fi
 
+rm -rf "$PRODUCT_DIR"
 mkdir -p "$PRODUCT_DIR"
+mkdir -p "$BUILD_ROOT"
 python3 -m PyInstaller \
-  --onefile \
+  "$PYI_MODE" \
   --name mksaas \
   --distpath "$PRODUCT_DIR" \
-  --workpath "$REPO_ROOT/build" \
-  --specpath "$REPO_ROOT/build" \
+  --workpath "$BUILD_ROOT/work" \
+  --specpath "$BUILD_ROOT/spec" \
   "$ENTRY"
+
+if [[ ! -e "$PRODUCT_EXEC" ]]; then
+  echo "构建失败：未找到产物 $PRODUCT_EXEC" >&2
+  exit 1
+fi
 
 # debug 构建完成后 build+1 回写；release 不递增
 if [[ "$RELEASE" -ne 1 ]]; then
@@ -132,5 +160,10 @@ json.dump(d, open(path, "w"), ensure_ascii=False, indent=2)
 PY
 fi
 
-SIZE=$(du -h "$PRODUCT" | cut -f1)
+SIZE=$(du -sh "$PRODUCT" | cut -f1)
 echo "构建完成：$PRODUCT ($SIZE)"
+echo "产物类型：$PRODUCT_KIND"
+echo "可执行文件：$PRODUCT_EXEC"
+if [[ "$RELEASE" -ne 1 ]]; then
+  echo "提示：开发态推荐直接通过源码运行，无需依赖 build 产物。"
+fi

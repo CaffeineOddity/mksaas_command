@@ -394,7 +394,7 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 
 1. 仓库根提供 `install.sh`（本地目录 + 符号链接安装）与 `build.sh`（PyInstaller 单文件二进制构建）
 2. `mksaas upgrade --local` 从本地构建产物升级；`mksaas uninstall` 卸载本地安装
-3. 版本号由仓库根 `VERSION` 文件的 `version`（`MAJOR.MINOR.PATCH`）与 `build`（整数）两个字段驱动；debug 产物为 `<version>-dev<build>`，release 产物为 `<version>`；产物落 `dist/<版本字符串>/mksaas`
+3. 版本号由仓库根 `VERSION` 文件的 `version`（`MAJOR.MINOR.PATCH`）与 `build`（整数）两个字段驱动；debug 产物为 `<version>-dev<build>`，release 产物为 `<version>`；产物落 `.build/dist/<版本字符串>/mksaas`
 4. `build.sh --bump` 提升版本号并重置 `build=1`，默认 `PATCH+1`，可选 `--minor` / `--major` 指定位级
 5. 命令符号链接 PATH 优先级：`/usr/local/bin` 优先，不可写时回退 `~/.local/bin`
 6. 四个组件共享同一组固定本地路径，不得各自硬编码不同位置

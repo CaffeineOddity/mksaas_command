@@ -69,7 +69,7 @@ def bump(version_str: str, level: str) -> Tuple[str, int]:
 
 def product_path(dist_dir: str, version_str: str, build: int,
                  release: bool = False) -> str:
-    """产物存储路径：dist/<版本字符串>/mksaas。"""
+    """产物存储路径：<dist_dir>/<版本字符串>/mksaas。"""
     return f"{dist_dir}/{version_string(version_str, build, release)}/mksaas"
 
 

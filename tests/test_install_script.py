@@ -21,8 +21,8 @@ def _make_product(dist_root: Path, ver_str: str) -> Path:
 
 
 def test_explicit_version_picks_exact_dir(tmp_path):
-    """指定版本字符串时，应精确匹配该 dist 子目录（不取最新）。"""
-    dist = tmp_path / "dist"
+    """指定版本字符串时，应精确匹配该 .build/dist 子目录（不取最新）。"""
+    dist = tmp_path / ".build" / "dist"
     _make_product(dist, "0.1.0-dev1")
     _make_product(dist, "0.1.0-dev5")  # 更新
     _make_product(dist, "0.1.0-dev2")
@@ -37,7 +37,7 @@ def test_explicit_version_picks_exact_dir(tmp_path):
 
 def test_explicit_version_missing(tmp_path):
     """指定不存在的版本→应可判定为缺失（脚本侧报错）。"""
-    dist = tmp_path / "dist"
+    dist = tmp_path / ".build" / "dist"
     _make_product(dist, "0.1.0-dev1")
     assert not (dist / "0.9.9-dev1" / "mksaas").exists()
 
