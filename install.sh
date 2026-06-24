@@ -7,6 +7,45 @@ REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 INSTALL_DIR="${HOME}/.mksaas-cli"
 EXEC="$INSTALL_DIR/mksaas"
 
+usage() {
+  cat <<'EOF' >&2
+用法: install.sh [-h|--help]
+
+把 mksaas 安装为本地可调用命令（本地目录 + 符号链接）。
+
+安装行为:
+  - 安装目录: ~/.mksaas-cli（存放可执行文件与版本信息）
+  - 符号链接: 优先 /usr/local/bin，不可写时回退 ~/.local/bin
+  - 安装来源: 若 dist/ 下有构建产物，安装最新版本产物；
+              否则安装源码入口（开发态：包装脚本调用 mksaas/__main__.py）
+  - 已存在安装时按升级语义覆盖旧版
+
+选项:
+  -h, --help    显示本帮助
+
+安装后:
+  - 确认 PATH 包含符号链接所在目录
+  - 若回退到 ~/.local/bin 且不在 PATH，请手动加入 shell 配置
+  - 不自动修改 shell 配置文件
+
+示例:
+  ./install.sh            # 安装/升级
+  build.sh && ./install.sh  # 先构建产物再安装
+
+升级/卸载也可通过已安装的命令完成:
+  mksaas upgrade --local   # 从本地构建产物升级
+  mksaas uninstall         # 卸载
+
+完整规则见 docs/build_install_upgrade_uninstall.md §5/§6
+EOF
+}
+
+case "${1:-}" in
+  -h|--help) usage; exit 0 ;;
+  "") ;;  # 无参数，继续安装
+  *) echo "未知参数: $1" >&2; usage; exit 1 ;;
+esac
+
 # 来源判定：dist 下最新版本产物优先；否则安装源码入口（开发态）
 pick_source() {
   local latest

@@ -13,7 +13,32 @@ BUMP=0
 BUMP_LEVEL=""
 
 usage() {
-  echo "用法: build.sh [--release] [--bump [--minor|--major]]" >&2
+  cat <<'EOF' >&2
+用法: build.sh [选项]
+
+用 PyInstaller 把 mksaas 打包为单文件二进制，产物落 dist/<版本>/mksaas。
+版本由仓库根 VERSION 文件的 version(MAJOR.MINOR.PATCH) 与 build(整数) 驱动。
+
+选项:
+  (无参数)        debug 构建：产物 dist/<version>-dev<build>/mksaas，
+                  构建完成后 build 自动 +1 回写 VERSION
+  --release       release 构建：产物 dist/<version>/mksaas，不递增 build
+  --bump          提升版本号并重置 build=1 后结束（默认 PATCH+1，不产二进制）
+                  可与 --release 组合：先 bump 再产 release 产物
+  --minor         与 --bump 组合：提升 MINOR 位并清零 PATCH（0.1.5 → 0.2.0）
+  --major         与 --bump 组合：提升 MAJOR 位并清零 MINOR/PATCH（1.2.3 → 2.0.0）
+  -h, --help      显示本帮助
+
+示例:
+  build.sh                  # debug 构建，build+1
+  build.sh --release        # release 构建，build 不变
+  build.sh --bump           # PATCH+1、build=1，不产二进制
+  build.sh --bump --minor   # MINOR+1、build=1，不产二进制
+  build.sh --bump --release # bump 后产 release 产物
+
+注: --minor / --major 仅在与 --bump 组合时生效，单独使用会报错。
+    完整规则见 docs/build_install_upgrade_uninstall.md §3/§4
+EOF
 }
 
 while [[ $# -gt 0 ]]; do
