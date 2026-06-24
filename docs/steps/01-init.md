@@ -24,6 +24,7 @@ mksaas init
 2. 启动时先读取 `.mksaas/setup-state.json`
 3. 若状态文件不存在，由第一个被编排步骤 `project` 负责初始化
 4. 全流程不强制一次跑完，可中途退出，下次再执行时从断点继续
+5. `project` 步骤就位完成后，`init` 进程内部 `os.chdir(project_dir)` 切换到项目目录，使后续被编排的 `env <group>` 与 `apply` 命令在项目目录内读取 `.mksaas/setup-state.json`
 
 ## 3. 编排范围
 
@@ -40,7 +41,14 @@ mksaas init
 1. 完整流程：`mksaas init`，由编排器引导 `project → env×N → apply`
 2. 逐步流程：用户也可不走 `init`，直接单步执行 `mksaas env <group>`、`mksaas apply`，`project` 可选
 
-逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目。apply 只校验环境必填项是否齐全。
+逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。
+
+逐步模式前置约束：
+
+1. `mksaas env <group>` 与 `mksaas apply` 启动时必须能定位到 `.mksaas/setup-state.json`
+2. 该状态文件只能由 `mksaas project` 创建，因此逐步模式要求当前目录已是 `mksaas project` 就位过的项目目录
+3. 状态文件不存在时，逐步命令提示用户先执行 `mksaas project`，不得自行创建
+4. `mksaas apply` 启动时必须保证 `project` 信息已存在于 JSON，缺失则终止并提示先执行 `mksaas project`；apply 是否 push 取决于 `should_push`
 
 两种方式共享同一个 `.mksaas/setup-state.json`，状态互通。
 

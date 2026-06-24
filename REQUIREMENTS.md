@@ -80,7 +80,17 @@
 
 1. `mksaas init`：全流程编排器，引导 `project → env×N → apply`
 2. `mksaas project`：单独采集项目与仓库信息
-3. `mksaas apply`：统一执行落地
+3. `mksaas env <group>`：单独采集某一环境分组
+4. `mksaas apply`：统一执行落地
+5. `mksaas upgrade --local`：从本地构建产物升级已安装的 `mksaas`
+6. `mksaas uninstall`：卸载本地安装的 `mksaas`
+
+安装与构建脚本（位于仓库根目录）：
+
+1. `install.sh`：把 `mksaas` 安装到本地固定目录并建立命令符号链接
+2. `build.sh`：用 PyInstaller 构建单文件二进制产物，输出到本地固定目录
+
+构建、安装、升级与卸载的完整规则见：[build_install_upgrade_uninstall.md](docs/build_install_upgrade_uninstall.md)
 
 ## 4.1 文档分层原则
 
@@ -89,8 +99,10 @@
 1. `REQUIREMENTS.md` 只负责总览、原则、索引和总流程
 2. `docs/steps/` 负责三个顶层步骤：`init`（编排）、`project`（项目采集）、`apply`（落地）
 3. `docs/env-groups/` 负责具体环境变量分组的字段定义、采集流程、分组命令、校验规则与安全要求
-4. `REQUIREMENTS.md` 中的“统一状态文件”章节是状态文件结构的唯一总览来源
-5. `docs/steps/02-apply.md` 是最终执行与落地规则的唯一真相来源
+4. `docs/build_install_upgrade_uninstall.md` 负责构建、安装、升级与卸载的完整规则
+5. `REQUIREMENTS.md` 中的“统一状态文件”章节是状态文件结构的唯一总览来源
+6. `docs/steps/02-apply.md` 是最终执行与落地规则的唯一真相来源
+7. `docs/build_install_upgrade_uninstall.md` 是构建/安装/升级/卸载规则的唯一真相来源
 
 具体约束：
 
@@ -136,6 +148,29 @@
 1. 不再区分敏感与非敏感字段，所有环境变量统一写入 `.env.*` 文件
 2. 不再生成 `secrets.*.env` 文件
 3. 终端输出时仍应避免直接打印完整密钥、连接串、token 等内容，以摘要形式展示
+
+### 5.2 环境分组标识符规范
+
+为保证 CLI 命令名、状态文件 group key、文档文件名三者一一对应且不产生歧义，统一约定如下：
+
+1. 每个 env 分组有唯一的规范标识符（`id`），采用下划线小写形式，例如 `github_oauth`、`cron_jobs`、`better_auth`
+2. `id` 即为状态文件 `profiles.<profile>.env_groups` 下的 group key，以及 `steps.init.env_groups_processed/skipped` 列表中的元素
+3. CLI 命令中的 group 参数使用连字符形式（`github-oauth`、`cron-jobs`、`better-auth`），CLI 内部负责连字符 ↔ 下划线的双向映射
+4. `docs/env-groups/` 文件名采用 `<序号>-<连字符形式>.md`，序号仅用于文档排序，不参与运行时映射
+5. CLI 与 apply 遍历分组的顺序固定为 `01~17` 的文档序号顺序，与 group key 的字母序无关
+6. 状态文件中只允许出现规范 group key，禁止混用连字符形式
+
+完整映射表见 `docs/env-groups/` 各文档与 §5.1 的分组清单。
+
+### 5.2.1 变量全集 schema
+
+为支撑 apply 的全量重建（§10），CLI 维护一份独立的变量全集 schema 文件 `docs/env-schema.yaml`，作为环境变量的唯一真相来源：
+
+1. schema 文件以 group 为单位组织，每个 group 列出其全部变量、`required`、默认值、`generate_if_empty`、脱敏类型
+2. CLI 在运行时加载该 schema；env 命令采集的字段、apply 重建 `.env.*` 的变量全集，均以该 schema 为准
+3. env-group 文档（`docs/env-groups/*.md`）描述采集流程与校验规则，变量清单以 schema 为准；两者冲突时以 schema 为准
+4. apply 全量重建 `.env.test` / `.env.prod` 时，按 schema 遍历全部变量：已采集的取状态文件值，未采集或跳过的取 schema 默认值（无默认值且非必填则写空串，必填且缺失则在 §10 校验阶段拦截）
+5. schema 变更时同步更新 env-group 文档，避免两处分叉
 
 ## 5.1 环境变量参考分组
 
@@ -230,7 +265,14 @@ flowchart TD
     O --> P
 ```
 
-逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项。
+逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。
+
+逐步模式的前置约束：
+
+1. 逐步模式下，`mksaas env <group>` 与 `mksaas apply` 启动时必须先定位到 `.mksaas/setup-state.json`
+2. 该状态文件只能由 `mksaas project` 创建；因此逐步模式要求用户**当前工作目录已是 `mksaas project` 就位过的项目目录**（即当前目录或其直接子层存在 `.mksaas/setup-state.json`）
+3. 若状态文件不存在，逐步命令应明确提示用户先执行 `mksaas project` 完成项目就位，不得自行创建 `.mksaas/` 或状态文件
+4. 当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项
 
 ## 7. 初始化时序图
 
@@ -273,7 +315,6 @@ sequenceDiagram
 ```text
 tourismchina/                  ← 本地项目目录 = git 仓库根目录
 ├── .mksaas/                   ← 状态目录，gitignore
-│   ├── project.yaml           ← 稳定的非敏感项目元信息
 │   ├── setup-state.json       ← 步骤状态与配置收集结果
 │   ├── .env.test              ← test 环境变量（apply 全量重建）
 │   └── .env.prod              ← prod 环境变量（apply 全量重建）
@@ -283,12 +324,11 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 
 说明：
 
-1. `project.yaml` 用于保存稳定的非敏感项目元信息
-2. `setup-state.json` 用于保存步骤状态和配置收集结果
-3. `.env.test`、`.env.prod` 落点为 `.mksaas/`，由 apply 全量重建，包含全部环境变量，不再单独生成 secrets 文件
-4. `.env` 落点为项目代码根目录，供 `pnpm run dev` 等工具链读取，内容由 apply 时用户选择的 profile 复制而来
-5. `.mksaas/` 整个目录不纳入版本控制
-6. 本地项目目录就位（clone、模板初始化、建空目录）由 `mksaas project` 完成；push 由 `mksaas apply` 完成
+1. `setup-state.json` 用于保存步骤状态、配置收集结果与项目元信息（`project` 块）
+2. `.env.test`、`.env.prod` 落点为 `.mksaas/`，由 apply 全量重建，包含全部环境变量，不再单独生成 secrets 文件
+3. `.env` 落点为项目代码根目录，供 `pnpm run dev` 等工具链读取，内容由 apply 时用户选择的 profile 复制而来
+4. `.mksaas/` 整个目录不纳入版本控制
+5. 本地项目目录就位（clone、模板初始化、建空目录）由 `mksaas project` 完成；push 由 `mksaas apply` 完成
 
 ## 9. 全局安全要求
 
@@ -315,9 +355,11 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 
 要求：
 
-1. 不自动泄露私有仓库地址中的鉴权信息
-2. 不自动输出 token、secret、webhook secret 全量值
-3. 不自动创建第三方云资源，避免误操作和权限越界
+1. 状态文件中的 `project.repo_url` 只存**干净 URL**（如 `https://github.com/owner/repo.git` 或 `git@github.com:owner/repo.git`），**不得存带 `user:token@` 鉴权段的 URL**
+2. clone/push 所需的鉴权完全由用户本地环境提供：用户须自行完成 SSH key 配置或 HTTPS 凭据转发（如 `gh auth login`、git credential helper、SSH agent forwarding）。CLI 不内置任何凭据获取、存储或注入逻辑
+3. CLI 不自动创建 GitHub 仓库、不自动创建第三方云资源，避免误操作和权限越界
+4. 任何输出 `repo_url` 的地方按干净 URL 展示；若用户误输入带鉴权段的 URL，CLI 应在落盘前剥离鉴权段并提示
+5. 不自动输出 token、secret、webhook secret 全量值
 
 ## 10. 技术约束
 
@@ -328,6 +370,7 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 5. 实现尽量兼容重复执行
 6. 同一命令重复执行时，优先复用 `setup-state.json` 中已有值
 7. 每一步命令都必须支持“读取已有值 -> 确认 -> 修改 -> 回写”的统一交互
+8. `install.sh`、`build.sh`、`mksaas upgrade --local`、`mksaas uninstall` 共同约定一组固定本地路径（见 §12），各脚本与命令必须读写同一组路径，不得各自硬编码不同位置
 
 ## 11. 验收标准
 
@@ -335,10 +378,23 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 
 1. 用户可以通过 `mksaas init` 完成全流程引导（project → env×N → apply，每步确认，env 可跳过，apply 前停确认）
 2. 用户可以通过 `mksaas project` 单独采集项目与仓库信息
-3. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令
+3. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令（逐步模式下要求当前目录已是 `project` 就位过的项目目录）
 4. 每个命令执行后都会更新 `.mksaas/setup-state.json`
 5. 每个命令再次执行时都会先展示已有 JSON 信息并询问是否修改
-6. `mksaas apply` 能根据 JSON 完成 clone、push、`.env.test`/`.env.prod`/`.env` 落地
+6. `mksaas apply` 启动时必须保证 `project` 信息已存在，否则终止并提示先执行 `mksaas project`；其后根据 JSON 完成 `.env.test`/`.env.prod`/`.env` 落地，并在 `should_push` 为真时 push（clone 与模板初始化由 `mksaas project` 完成）
 7. 密钥、连接串、token 等内容不会被直接打印到终端
-8. macOS 下可安装为 `mksaas` 命令
-9. 不再依赖 shell 脚本作为运行入口
+8. macOS 下可通过 `install.sh` 安装为 `mksaas` 命令，可通过 `mksaas upgrade --local` 升级，可通过 `mksaas uninstall` 卸载
+9. 不再依赖 shell 脚本作为运行入口（`install.sh` / `build.sh` 仅用于安装与构建，不是 CLI 的运行入口）
+
+## 12. 构建、安装、升级与卸载
+
+构建、安装、升级与卸载的完整规则见独立文档：[build_install_upgrade_uninstall.md](docs/build_install_upgrade_uninstall.md)。
+
+本节仅保留总览：
+
+1. 仓库根提供 `install.sh`（本地目录 + 符号链接安装）与 `build.sh`（PyInstaller 单文件二进制构建）
+2. `mksaas upgrade --local` 从本地构建产物升级；`mksaas uninstall` 卸载本地安装
+3. 版本号由仓库根 `VERSION` 文件的 `version`（`MAJOR.MINOR.PATCH`）与 `build`（整数）两个字段驱动；debug 产物为 `<version>-dev<build>`，release 产物为 `<version>`；产物落 `dist/<版本字符串>/mksaas`
+4. `build.sh --bump` 提升版本号并重置 `build=1`，默认 `PATCH+1`，可选 `--minor` / `--major` 指定位级
+5. 命令符号链接 PATH 优先级：`/usr/local/bin` 优先，不可写时回退 `~/.local/bin`
+6. 四个组件共享同一组固定本地路径，不得各自硬编码不同位置
