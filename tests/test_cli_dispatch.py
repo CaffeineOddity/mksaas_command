@@ -18,8 +18,8 @@ def test_no_command_exits_nonzero():
 
 
 def test_unknown_command_is_unimplemented():
-    # upgrade/uninstall 尚未实现（F11），验证分发返回未实现码
-    c = FakeConsole()
-    rc = main(["upgrade", "--local"], console=c)
-    assert rc == 2
-    assert any("尚未实现" in line for line in c.stdout)
+    # 全部子命令已实现；这里验证 --version 与无命令分支已覆盖。
+    # 用一个未注册的伪命令走 argparse 报错路径。
+    import pytest
+    with pytest.raises(SystemExit):
+        main(["bogus-subcommand"], console=FakeConsole())

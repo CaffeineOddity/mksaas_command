@@ -55,16 +55,16 @@ def main(argv: Optional[List[str]] = None, console: Optional[Console] = None) ->
         parser.print_help()
         return 1
 
-    # 各子命令在后续 Feature 实现；F0 仅保留分发骨架与未实现提示。
+    # 各子命令实现于 commands 包；未注册命令由 argparse 报错。
     from mksaas import commands as cmd
 
     dispatch = {
-        "init": getattr(cmd, "run_init", None),
-        "project": getattr(cmd, "run_project", None),
-        "env": getattr(cmd, "run_env", None),
-        "apply": getattr(cmd, "run_apply", None),
-        "upgrade": getattr(cmd, "run_upgrade", None),
-        "uninstall": getattr(cmd, "run_uninstall", None),
+        "init": cmd.run_init,
+        "project": cmd.run_project,
+        "env": cmd.run_env,
+        "apply": cmd.run_apply,
+        "upgrade": cmd.run_upgrade,
+        "uninstall": cmd.run_uninstall,
     }
     handler = dispatch.get(args.command)
     if handler is None:
