@@ -18,8 +18,8 @@ def test_no_command_exits_nonzero():
 
 
 def test_unknown_command_is_unimplemented():
-    # argparse 对未知子命令本身报错；这里用一个已注册但未实现的命令验证分发。
+    # upgrade/uninstall 尚未实现（F11），验证分发返回未实现码
     c = FakeConsole()
-    rc = main(["project"], console=c)
+    rc = main(["upgrade", "--local"], console=c)
     assert rc == 2
     assert any("尚未实现" in line for line in c.stdout)

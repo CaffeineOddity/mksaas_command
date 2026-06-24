@@ -1,5 +1,8 @@
-"""mksaas.commands — 子命令分发入口聚合。
+"""mksaas.commands — 子命令分发入口聚合。"""
 
-各 run_* 函数在对应 Feature 中实现；F0 暂留空，使 cli.dispatch 的 getattr 返回 None
-从而给出"尚未实现"提示，而非导入失败。
-"""
+from mksaas.commands.apply import run_apply
+from mksaas.commands.env import run_env
+from mksaas.commands.init import run_init
+from mksaas.commands.project import run_project
+
+__all__ = ["run_init", "run_project", "run_env", "run_apply"]
