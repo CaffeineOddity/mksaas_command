@@ -8,7 +8,7 @@
 
 1. `init` 负责初始化状态文件与仓库配置
 2. `init` 不直接执行 clone、remote 绑定或 push
-3. 具体环境变量采集通过 `mksaas env <group>` 完成
+3. 具体环境变量采集通过 `mksaas env <group> [--profile test|prod]` 完成，`--profile` 决定本次写入 `profiles.test` 还是 `profiles.prod`
 4. 真正的 Git 操作和环境落地在 `apply` 阶段统一执行
 
 ## 2. 独立命令
@@ -123,7 +123,7 @@ CLI 需要支持以下三类仓库来源：
 3. 询问用户是否沿用已有配置
 4. 如果用户选择修改，再进入输入流程
 5. 修改后立即回写 JSON
-6. 提示用户继续通过 `mksaas env <group>` 补全环境配置
+6. 提示用户继续通过 `mksaas env <group> [--profile test|prod]` 补全环境配置
 
 ### 8.2 已经关联好 MkSaaS 项目仓库
 

@@ -25,7 +25,7 @@
 4. 如果 JSON 中已有信息，CLI 需要先列出已有值并让用户确认是否修改。
 5. 每一步修改完成后都回写 JSON 状态文件。
 6. 最后由统一的执行步骤根据 JSON 状态文件完成仓库操作与环境文件落地。
-7. 敏感信息必须与普通配置分层处理，避免泄露。
+7. 终端输出需对密钥、连接串、token 等内容做摘要处理，避免泄露。
 8. 后续支持打包为单独可执行文件。
 
 ## 3. 总体原则
@@ -60,13 +60,9 @@
 5. 修改后立即更新 JSON
 6. 提示该步骤尚未真正执行，需在最后一步统一应用
 
-### 3.4 敏感信息分层
+### 3.4 输出脱敏
 
-状态文件中允许保留完整运行上下文，但敏感信息处理必须有清晰规则：
-
-1. 需求层定义统一 JSON 结构
-2. 实现层必须明确哪些字段属于敏感信息
-3. 最终生成环境文件时，敏感信息要落到专门的 secrets 文件中
+本项目不再区分敏感与非敏感字段，所有环境变量统一写入 `.env.*`。终端输出时对密钥、连接串、token、webhook 等内容做摘要处理，避免直接打印完整值。
 
 ## 4. 分步骤文档索引
 
@@ -98,7 +94,7 @@
 
 1. `docs/steps/` 不重复维护具体变量清单，除非只是做简短索引
 2. 变量范围、采集问题、字段校验规则优先写在 `docs/env-groups/`
-3. `.env.*`、`secrets.*.env` 的生成与落地策略优先写在 `docs/steps/02-apply.md`
+3. `.env.*` 的生成与落地策略优先写在 `docs/steps/02-apply.md`
 4. 若变量名、provider 或采集逻辑发生变化，应优先更新 `docs/env-groups/`，再检查是否需要同步更新根文档和步骤文档中的索引描述
 
 ## 5. 统一状态文件
@@ -128,11 +124,16 @@
 字段对象统一使用以下结构：
 
 1. `value`
-2. `sensitive`
-3. `source`
-4. `description`
-5. `required`
-6. `generate_if_empty`
+2. `source`
+3. `description`
+4. `required`
+5. `generate_if_empty`
+
+说明：
+
+1. 不再区分敏感与非敏感字段，所有环境变量统一写入 `.env.*` 文件
+2. 不再生成 `secrets.*.env` 文件
+3. 终端输出时仍应避免直接打印完整密钥、连接串、token 等内容，以摘要形式展示
 
 ## 5.1 环境变量参考分组
 
@@ -144,7 +145,7 @@
 
 1. 以项目根目录的 `.env` 体系作为最终环境落点
 2. 以 `env.example` 或 `.env.example` 作为变量来源基线
-3. `.env` 文件及其变体不得提交到版本控制
+3. `.env`、`.env.test`、`.env.prod` 与整个 `.mksaas/` 目录都不能提交到版本控制
 4. 环境变量配置完成后，应支持通过 `pnpm run dev` 验证
 5. 各能力的具体参数通常需要先在对应平台完成创建，再回填到 CLI
 
@@ -178,23 +179,30 @@
 
 建议命令如下：
 
-1. `mksaas env core`
-2. `mksaas env database`
-3. `mksaas env better-auth`
-4. `mksaas env github-oauth`
-5. `mksaas env google-oauth`
-6. `mksaas env email-newsletter`
-7. `mksaas env storage`
-8. `mksaas env payment`
-9. `mksaas env configurations`
-10. `mksaas env analytics`
-11. `mksaas env notification`
-12. `mksaas env affiliate`
-13. `mksaas env captcha`
-14. `mksaas env crisp`
-15. `mksaas env cron-jobs`
-16. `mksaas env ai`
-17. `mksaas env firecrawl`
+1. `mksaas env core [--profile test|prod]`
+2. `mksaas env database [--profile test|prod]`
+3. `mksaas env better-auth [--profile test|prod]`
+4. `mksaas env github-oauth [--profile test|prod]`
+5. `mksaas env google-oauth [--profile test|prod]`
+6. `mksaas env email-newsletter [--profile test|prod]`
+7. `mksaas env storage [--profile test|prod]`
+8. `mksaas env payment [--profile test|prod]`
+9. `mksaas env configurations [--profile test|prod]`
+10. `mksaas env analytics [--profile test|prod]`
+11. `mksaas env notification [--profile test|prod]`
+12. `mksaas env affiliate [--profile test|prod]`
+13. `mksaas env captcha [--profile test|prod]`
+14. `mksaas env crisp [--profile test|prod]`
+15. `mksaas env cron-jobs [--profile test|prod]`
+16. `mksaas env ai [--profile test|prod]`
+17. `mksaas env firecrawl [--profile test|prod]`
+
+`--profile` 规则：
+
+1. `--profile test` 表示本次采集写入 `profiles.test`
+2. `--profile prod` 表示本次采集写入 `profiles.prod`
+3. 缺省时优先按 `test` 处理，或提示用户选择
+4. `apply` 阶段会同时基于 `profiles.test` 与 `profiles.prod` 全量重建 `.env.test` 与 `.env.prod`，随后询问用户 `.env` 同步 test 还是 prod，再删除重建 `.env`
 
 ## 6. 总体流程图
 
@@ -210,9 +218,9 @@ flowchart TD
     G -->|是| I[执行 mksaas apply]
     I --> J[校验 repo 与 env_groups 完整性]
     J --> K[clone 项目 / 绑定远程 / push]
-    K --> L[生成 .env.test / .env.prod / .env]
-    L --> M[生成 secrets.test.env / secrets.prod.env]
-    M --> N[生成 SETUP_NEXT_STEPS.md]
+    K --> L[全量重建 .env.test / .env.prod]
+    L --> N[询问 .env 同步 test 还是 prod 并删除重建]
+    N --> O[生成 SETUP_NEXT_STEPS.md]
 ```
 
 ## 7. 初始化时序图
@@ -238,7 +246,7 @@ sequenceDiagram
     U->>C: 执行 mksaas apply
     C->>J: 读取完整状态
     C->>G: clone / 初始化模板 / 配置 origin / push
-    C->>F: 生成 env / secrets / 提示文档
+    C->>F: 全量重建 env 文件并询问 .env 同步来源
     C->>J: 回写已应用状态
     C-->>U: 输出最终结果
 ```
@@ -250,8 +258,6 @@ sequenceDiagram
 ```text
 .mksaas/project.yaml
 .mksaas/setup-state.json
-.mksaas/secrets.test.env
-.mksaas/secrets.prod.env
 .env.test
 .env.prod
 .env
@@ -262,30 +268,22 @@ SETUP_NEXT_STEPS.md
 
 1. `project.yaml` 用于保存稳定的非敏感项目元信息
 2. `setup-state.json` 用于保存步骤状态和配置收集结果
-3. `secrets.*.env` 用于保存敏感配置
-4. `.env.*` 由统一生成步骤产出
+3. `.env.*` 由统一生成步骤产出，包含全部环境变量，不再单独生成 secrets 文件
+4. `.mksaas/` 整个目录不纳入版本控制
 5. Git clone、remote 绑定、push 由最后一步统一执行
 
 ## 9. 全局安全要求
 
-### 9.1 敏感信息
+### 9.1 环境文件保护
 
-以下字段必须视为敏感信息：
-
-1. `DATABASE_URL`
-2. 各类 `*_SECRET`
-3. 各类 `*_API_KEY`
-4. 各类 `TOKEN`
-5. 各类 `PASSWORD`
-6. 各类 `CLIENT_SECRET`
-7. 对象存储的访问密钥
+本项目不再区分敏感与非敏感字段，所有环境变量统一写入 `.env.*`，因此 `.env` 文件本身的保护尤为重要。
 
 要求：
 
-1. CLI 输出中不得打印完整敏感值
-2. 敏感值需要隐藏输入
-3. 生成的 secrets 文件尽量限制为当前用户可读写
-4. `.gitignore` 必须覆盖 `.env`、`.env.test`、`.env.prod`、`.mksaas/secrets.*.env`
+1. `.gitignore` 必须覆盖整个 `.mksaas/` 目录、`.env`、`.env.test`、`.env.prod`
+2. CLI 输出中不得打印完整密钥、连接串、token 等内容，以摘要形式展示
+3. 采集敏感字段（密钥、token、密码、webhook 等）时使用隐藏输入
+4. 不再单独生成 `secrets.*.env` 文件
 
 ### 9.2 随机数与密钥
 
@@ -321,7 +319,7 @@ SETUP_NEXT_STEPS.md
 2. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令
 3. 每个命令执行后都会更新 `.mksaas/setup-state.json`
 4. 每个命令再次执行时都会先展示已有 JSON 信息并询问是否修改
-5. `mksaas apply` 能根据 JSON 完成 clone、push、`.env` 和 `secrets` 落地
-6. 敏感信息不会被直接打印到终端
+5. `mksaas apply` 能根据 JSON 完成 clone、push、`.env.test`/`.env.prod`/`.env` 落地
+6. 密钥、连接串、token 等内容不会被直接打印到终端
 7. macOS 下可安装为 `mksaas` 命令
 8. 不再依赖 shell 脚本作为运行入口

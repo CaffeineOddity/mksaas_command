@@ -14,7 +14,7 @@
 
 1. 环境变量以项目根目录的 `.env` 体系为最终落点
 2. 采集时应参考 `env.example` 或 `.env.example`
-3. `.env`、`.env.test`、`.env.prod` 与 secrets 文件都不能提交到版本控制
+3. `.env`、`.env.test`、`.env.prod` 与整个 `.mksaas/` 目录都不能提交到版本控制
 4. 最终完成配置后，应支持通过 `pnpm run dev` 验证环境是否正确
 
 ## 3. 独立命令
@@ -44,7 +44,7 @@ mksaas env better-auth [--profile test|prod]
 4. 用户选择沿用已有值，或进入修改流程逐项填写
 5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
 6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
-7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*` 或 `secrets.*.env`
+7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
 8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
 
 ## 6. 流程图
@@ -99,9 +99,10 @@ sequenceDiagram
 
 1. 空值且允许自动生成时，在最终 apply 阶段生成
 2. 生成后回写 `.mksaas/setup-state.json`
-3. 写入 `secrets.*.env`
+3. 写入 `.env.test` 与 `.env.prod`
 
 ## 10. 安全要求
 
 1. 必须使用 Python 安全随机数生成
 2. 不得在终端打印完整密钥
+

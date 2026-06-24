@@ -29,7 +29,6 @@
         "core": {
           "NEXT_PUBLIC_BASE_URL": {
             "value": "http://localhost:3000",
-            "sensitive": false,
             "source": "prompt",
             "required": true,
             "description": "Application base URL"
@@ -38,7 +37,6 @@
         "database": {
           "DATABASE_URL": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": true,
             "description": "Database connection string"
@@ -47,7 +45,6 @@
         "better_auth": {
           "BETTER_AUTH_SECRET": {
             "value": "",
-            "sensitive": true,
             "source": "prompt_or_generate",
             "required": true,
             "generate_if_empty": true,
@@ -57,14 +54,12 @@
         "github_oauth": {
           "GITHUB_CLIENT_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "GitHub OAuth client ID"
           },
           "GITHUB_CLIENT_SECRET": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "GitHub OAuth client secret"
@@ -73,14 +68,12 @@
         "google_oauth": {
           "GOOGLE_CLIENT_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Google OAuth client ID"
           },
           "GOOGLE_CLIENT_SECRET": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Google OAuth client secret"
@@ -89,7 +82,6 @@
         "email": {
           "RESEND_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Resend API key"
@@ -98,14 +90,12 @@
         "newsletter": {
           "BEEHIIV_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Beehiiv API key"
           },
           "BEEHIIV_PUBLICATION_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Beehiiv publication ID"
@@ -114,42 +104,36 @@
         "storage": {
           "STORAGE_REGION": {
             "value": "auto",
-            "sensitive": false,
             "source": "default",
             "required": false,
             "description": "Storage region"
           },
           "STORAGE_BUCKET_NAME": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Storage bucket name"
           },
           "STORAGE_ACCESS_KEY_ID": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Storage access key ID"
           },
           "STORAGE_SECRET_ACCESS_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Storage secret access key"
           },
           "STORAGE_ENDPOINT": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Storage endpoint"
           },
           "STORAGE_PUBLIC_URL": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Storage public URL"
@@ -158,63 +142,54 @@
         "payment": {
           "STRIPE_SECRET_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Stripe secret key"
           },
           "STRIPE_WEBHOOK_SECRET": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Stripe webhook secret"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe monthly price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe yearly price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_LIFETIME": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe lifetime price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe credits basic price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe credits standard price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe credits premium price ID"
           },
           "NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Stripe credits enterprise price ID"
@@ -223,14 +198,12 @@
         "configurations": {
           "DISABLE_IMAGE_OPTIMIZATION": {
             "value": "false",
-            "sensitive": false,
             "source": "default",
             "required": false,
             "description": "Disable image optimization"
           },
           "NEXT_PUBLIC_DEMO_WEBSITE": {
             "value": "false",
-            "sensitive": false,
             "source": "default",
             "required": false,
             "description": "Run as demo website"
@@ -239,91 +212,78 @@
         "analytics": {
           "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Google Analytics ID"
           },
           "NEXT_PUBLIC_UMAMI_WEBSITE_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Umami website ID"
           },
           "NEXT_PUBLIC_UMAMI_SCRIPT": {
             "value": "https://cloud.umami.is/script.js",
-            "sensitive": false,
             "source": "default",
             "required": false,
             "description": "Umami script URL"
           },
           "NEXT_PUBLIC_OPENPANEL_CLIENT_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "OpenPanel client ID"
           },
           "NEXT_PUBLIC_PLAUSIBLE_DOMAIN": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Plausible domain"
           },
           "NEXT_PUBLIC_PLAUSIBLE_SCRIPT": {
             "value": "https://plausible.io/js/script.js",
-            "sensitive": false,
             "source": "default",
             "required": false,
             "description": "Plausible script URL"
           },
           "NEXT_PUBLIC_AHREFS_WEBSITE_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Ahrefs website ID"
           },
           "NEXT_PUBLIC_SELINE_TOKEN": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Seline token"
           },
           "NEXT_PUBLIC_DATAFAST_WEBSITE_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "DataFast website ID"
           },
           "NEXT_PUBLIC_DATAFAST_DOMAIN": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "DataFast domain"
           },
           "NEXT_PUBLIC_POSTHOG_KEY": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "PostHog key"
           },
           "NEXT_PUBLIC_POSTHOG_HOST": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "PostHog host"
           },
           "NEXT_PUBLIC_CLARITY_PROJECT_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Clarity project ID"
@@ -332,14 +292,12 @@
         "notification": {
           "DISCORD_WEBHOOK_URL": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Discord webhook URL"
           },
           "FEISHU_WEBHOOK_URL": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Feishu webhook URL"
@@ -348,14 +306,12 @@
         "affiliate": {
           "NEXT_PUBLIC_AFFILIATE_AFFONSO_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Affonso affiliate ID"
           },
           "NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "PromoteKit affiliate ID"
@@ -364,14 +320,12 @@
         "captcha": {
           "NEXT_PUBLIC_TURNSTILE_SITE_KEY": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Turnstile site key"
           },
           "TURNSTILE_SECRET_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Turnstile secret key"
@@ -380,7 +334,6 @@
         "crisp": {
           "NEXT_PUBLIC_CRISP_WEBSITE_ID": {
             "value": "",
-            "sensitive": false,
             "source": "prompt",
             "required": false,
             "description": "Crisp website ID"
@@ -389,14 +342,12 @@
         "cron_jobs": {
           "CRON_JOBS_USERNAME": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Cron jobs username"
           },
           "CRON_JOBS_PASSWORD": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Cron jobs password"
@@ -405,56 +356,48 @@
         "ai": {
           "AI_GATEWAY_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "AI gateway API key"
           },
           "FAL_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "FAL API key"
           },
           "FIREWORKS_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Fireworks API key"
           },
           "OPENAI_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "OpenAI API key"
           },
           "REPLICATE_API_TOKEN": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Replicate API token"
           },
           "GOOGLE_GENERATIVE_AI_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Google Generative AI API key"
           },
           "DEEPSEEK_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "DeepSeek API key"
           },
           "OPENROUTER_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "OpenRouter API key"
@@ -463,7 +406,6 @@
         "firecrawl": {
           "FIRECRAWL_API_KEY": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": false,
             "description": "Firecrawl API key"
@@ -477,7 +419,6 @@
         "core": {
           "NEXT_PUBLIC_BASE_URL": {
             "value": "https://your-domain.com",
-            "sensitive": false,
             "source": "prompt",
             "required": true,
             "description": "Application base URL"
@@ -486,7 +427,6 @@
         "database": {
           "DATABASE_URL": {
             "value": "",
-            "sensitive": true,
             "source": "prompt",
             "required": true,
             "description": "Database connection string"
@@ -495,7 +435,6 @@
         "better_auth": {
           "BETTER_AUTH_SECRET": {
             "value": "",
-            "sensitive": true,
             "source": "prompt_or_generate",
             "required": true,
             "generate_if_empty": true,
@@ -511,14 +450,12 @@
       "profiles": {
         "test": {
           "DATABASE_URL": {
-            "value": "",
-            "sensitive": true
+            "value": ""
           }
         },
         "prod": {
           "DATABASE_URL": {
-            "value": "",
-            "sensitive": true
+            "value": ""
           }
         }
       }
@@ -615,8 +552,6 @@
     "env_test_file": ".env.test",
     "env_prod_file": ".env.prod",
     "default_env_file": ".env",
-    "secrets_test_file": ".mksaas/secrets.test.env",
-    "secrets_prod_file": ".mksaas/secrets.prod.env",
     "steps_doc_file": "SETUP_NEXT_STEPS.md"
   },
   "apply": {

@@ -14,7 +14,7 @@
 
 1. 环境变量以项目根目录的 `.env` 体系为最终落点
 2. 采集时应参考 `env.example` 或 `.env.example`
-3. `.env`、`.env.test`、`.env.prod` 与 secrets 文件都不能提交到版本控制
+3. `.env`、`.env.test`、`.env.prod` 与整个 `.mksaas/` 目录都不能提交到版本控制
 4. 最终完成配置后，应支持通过 `pnpm run dev` 验证环境是否正确
 
 ## 3. 独立命令
@@ -44,7 +44,7 @@ mksaas env firecrawl [--profile test|prod]
 4. 用户选择沿用已有值，或进入修改流程逐项填写
 5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
 6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
-7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*` 或 `secrets.*.env`
+7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
 8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
 
 ## 6. 流程图
@@ -97,11 +97,12 @@ sequenceDiagram
 
 ## 9. 生成要求
 
-1. 写入 `secrets.*.env`
+1. 写入 `.env.*`
 2. 未启用时可跳过输出
 3. 启用状态写入 JSON
 
 ## 10. 安全要求
 
-1. `FIRECRAWL_API_KEY` 必须标记为敏感字段
-2. 不得输出完整 API Key
+1. 不得输出完整 API Key
+2. 采集时对 API Key 使用隐藏输入
+
