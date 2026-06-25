@@ -2,6 +2,6 @@
   "app_name": "mksaas",
   "entry": "mksaas/__main__.py",
   "build_root": ".build",
-  "version": "0.1.0",
+  "version": "0.0.1",
   "build": 1
 }
