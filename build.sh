@@ -215,6 +215,14 @@ else
   fi
 fi
 
+# 构建时把真实版本字符串注入 mksaas/_version.py，PyInstaller 会打进二进制
+# 这样打包后的 mksaas --version 能读到真实版本，不依赖运行环境的 VERSION 文件
+cat > "$REPO_ROOT/mksaas/_version.py" <<EOF
+"""mksaas._version — 构建时注入的版本字符串（由 build.sh 生成）。"""
+
+__version__ = "$PRODUCT_VERSION"
+EOF
+
 # 校验 PyInstaller
 if ! python3 -c "import PyInstaller" 2>/dev/null; then
   echo "PyInstaller 不可用，请先安装：pip install pyinstaller" >&2
