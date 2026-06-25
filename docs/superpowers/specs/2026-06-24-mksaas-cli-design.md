@@ -42,9 +42,9 @@ mksaas_command/
 │   │   ├── upgrade.py           ← mksaas upgrade --local
 │   │   └── uninstall.py         ← mksaas uninstall
 │   ├── env_writer.py            ← 全量重建 .env.test/.env.prod、复制根 .env
-│   ├── version.py               ← 读 VERSION，构造版本字符串
+│   ├── version.py               ← 读 build.config.json，构造版本字符串
 │   └── paths.py                 ← 固定本地路径（安装/产物/符号链接）
-├── VERSION                      ← {version, build}
+├── build.config.json            ← 构建配置 + {version, build}
 ├── build.sh
 ├── install.sh
 ├── tests/                       ← pytest，每特性一个测试文件
@@ -95,7 +95,7 @@ mksaas_command/
 | F7 | env_writer.py 全量重建 | F2,F1 | schema 全变量遍历；已采集取值/未采集取默认/无默认写空串；必填缺失拦截；先删后建不留旧变量；.env 同步来源 |
 | F8 | `mksaas apply` | F4,F6,F7 | project 缺失终止；必填校验；重建+同步；should_push 真假分支；push 鉴权失败提示；回写 steps.apply |
 | F9 | `mksaas init` 编排器 | F4,F6,F8 | project 必填不可跳；env 可跳；apply 前停确认；续跑进度；不泄露密钥摘要 |
-| F10 | VERSION/build.sh | — | debug 产物路径与 build+1；--release 不递增；--bump PATCH/minor/major；--minor 单用报错 |
+| F10 | build.config.json/build.sh | — | debug 产物路径与 next_build 回写；--release 不递增；--bump PATCH/minor/major 且重置 build=0；--minor 单用报错 |
 | F11 | install.sh + paths.py + upgrade --local + uninstall | F10 | 符号链接 PATH 优先级回退；install 来源判定；upgrade 原子替换、保留符号链接；uninstall 幂等、不删项目内 .mksaas |
 
 F0–F3 为底层基石；F4–F9 为主线命令；F10–F11 为安装生命周期。每特性独立 commit & push。
@@ -125,4 +125,4 @@ F0–F3 为底层基石；F4–F9 为主线命令；F10–F11 为安装生命周
 
 1. `modules` 块（provider/enabled/plans）在首版只做最小落盘与透传，深度采集留后续——首版 env 命令聚焦 schema 变量采集，modules 仅 project 阶段初始化默认结构
 2. `SETUP_NEXT_STEPS.md` 内容模板在 F8 实现期确定
-3. install.sh 来源判定（`.build/dist` 最新产物 vs 源码入口）在 F11 实现期按文档 §5 第 7 条固定
+3. install.sh 来源判定（默认源码入口，`--version` 显式安装 `.build/dist` 产物）在 F11 实现期按文档 §5 第 7~9 条固定

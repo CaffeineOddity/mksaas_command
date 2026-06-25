@@ -87,8 +87,8 @@
 
 安装与构建脚本（位于仓库根目录）：
 
-1. `install.sh`：把 `mksaas` 安装到本地固定目录并建立命令符号链接
-2. `build.sh`：用 PyInstaller 构建单文件二进制产物，输出到本地固定目录
+1. `install.sh`：把 `mksaas` 安装到本地固定目录并建立命令符号链接；无参数默认安装源码入口
+2. `build.sh`：用 PyInstaller 构建发布产物；release 默认 `--onedir`，需要时可显式使用 `--onefile`
 
 构建、安装、升级与卸载的完整规则见：[build_install_upgrade_uninstall.md](docs/build_install_upgrade_uninstall.md)
 
@@ -392,9 +392,9 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 
 本节仅保留总览：
 
-1. 仓库根提供 `install.sh`（本地目录 + 符号链接安装）与 `build.sh`（PyInstaller 单文件二进制构建）
+1. 仓库根提供 `install.sh`（本地目录 + 符号链接安装，默认源码入口）与 `build.sh`（PyInstaller 发布构建，release 默认 `--onedir`）
 2. `mksaas upgrade --local` 从本地构建产物升级；`mksaas uninstall` 卸载本地安装
-3. 版本号由仓库根 `VERSION` 文件的 `version`（`MAJOR.MINOR.PATCH`）与 `build`（整数）两个字段驱动；debug 产物为 `<version>-dev<build>`，release 产物为 `<version>`；产物落 `.build/dist/<版本字符串>/mksaas`
-4. `build.sh --bump` 提升版本号并重置 `build=1`，默认 `PATCH+1`，可选 `--minor` / `--major` 指定位级
+3. 版本号由仓库根 `build.config.json` 中的 `version`（`MAJOR.MINOR.PATCH`）与 `build`（整数）两个字段驱动；debug 产物为 `<version>-dev<build>`，release 产物为 `<version>`；产物容器落 `.build/dist/<版本字符串>/mksaas`，默认目录型可执行文件为 `.../mksaas/mksaas`
+4. `build.sh --bump` 提升版本号并重置 `build=0`，默认 `PATCH+1`，可选 `--minor` / `--major` 指定位级
 5. 命令符号链接 PATH 优先级：`/usr/local/bin` 优先，不可写时回退 `~/.local/bin`
 6. 四个组件共享同一组固定本地路径，不得各自硬编码不同位置

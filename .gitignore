@@ -2,3 +2,4 @@
 .build/
 r/
 *.pyc
+.pytest_cache

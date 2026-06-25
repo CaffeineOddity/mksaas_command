@@ -8,8 +8,8 @@ from mksaas import version
 
 
 def test_read_version(tmp_path, monkeypatch):
-    # 默认 VERSION 由 build.sh 维护；测试用独立文件避免污染仓库 VERSION
-    vf = tmp_path / "VERSION"
+    # 默认 build.config.json 由 build.sh 维护；测试用独立文件避免污染仓库配置
+    vf = tmp_path / "build.config.json"
     vf.write_text(json.dumps({"version": "0.1.0", "build": 10}))
     v, b = version.read_version(vf)
     assert v == "0.1.0"
@@ -17,7 +17,7 @@ def test_read_version(tmp_path, monkeypatch):
 
 
 def test_read_version_invalid(tmp_path):
-    vf = tmp_path / "VERSION"
+    vf = tmp_path / "build.config.json"
     vf.write_text("{not json")
     with pytest.raises(version.VersionError):
         version.read_version(vf)
@@ -34,19 +34,19 @@ def test_version_string_release():
 def test_bump_patch():
     v, b = version.bump("0.1.5", "patch")
     assert v == "0.1.6"
-    assert b == 1
+    assert b == 0
 
 
 def test_bump_minor():
     v, b = version.bump("0.1.5", "minor")
     assert v == "0.2.0"
-    assert b == 1
+    assert b == 0
 
 
 def test_bump_major():
     v, b = version.bump("1.2.3", "major")
     assert v == "2.0.0"
-    assert b == 1
+    assert b == 0
 
 
 def test_bump_invalid_level():
@@ -60,10 +60,24 @@ def test_bump_invalid_version():
 
 
 def test_write_version(tmp_path):
-    vf = tmp_path / "VERSION"
-    version.write_version(vf, "0.2.0", 1)
+    vf = tmp_path / "build.config.json"
+    vf.write_text(
+        json.dumps({
+            "app_name": "demo",
+            "entry": "main.py",
+            "version": "0.1.0",
+            "build": 2,
+        }),
+        encoding="utf-8",
+    )
+    version.write_version(vf, "0.2.0", 0)
     data = json.loads(vf.read_text())
-    assert data == {"version": "0.2.0", "build": 1}
+    assert data == {
+        "app_name": "demo",
+        "entry": "main.py",
+        "version": "0.2.0",
+        "build": 0,
+    }
 
 
 def test_parse_product_path_debug():

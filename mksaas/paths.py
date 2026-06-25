@@ -29,7 +29,7 @@ def dist_dir() -> Path:
 
 
 def executable_path() -> Path:
-    """安装目录内的可执行文件路径。"""
+    """安装目录内的稳定包装入口路径。"""
     return install_dir() / "mksaas"
 
 

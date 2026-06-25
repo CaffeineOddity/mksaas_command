@@ -9,10 +9,15 @@ from __future__ import annotations
 import subprocess
 from pathlib import Path
 
-from mksaas import version
+def _make_onedir_product(dist_root: Path, ver_str: str) -> Path:
+    d = dist_root / ver_str / "mksaas"
+    d.mkdir(parents=True)
+    f = d / "mksaas"
+    f.write_text("bin-" + ver_str)
+    return f
 
 
-def _make_product(dist_root: Path, ver_str: str) -> Path:
+def _make_onefile_product(dist_root: Path, ver_str: str) -> Path:
     d = dist_root / ver_str
     d.mkdir(parents=True)
     f = d / "mksaas"
@@ -21,24 +26,23 @@ def _make_product(dist_root: Path, ver_str: str) -> Path:
 
 
 def test_explicit_version_picks_exact_dir(tmp_path):
-    """指定版本字符串时，应精确匹配该 .build/dist 子目录（不取最新）。"""
+    """指定版本字符串时，应精确匹配该 .build/dist 子目录。"""
     dist = tmp_path / ".build" / "dist"
-    _make_product(dist, "0.1.0-dev1")
-    _make_product(dist, "0.1.0-dev5")  # 更新
-    _make_product(dist, "0.1.0-dev2")
+    _make_onedir_product(dist, "0.1.0-dev1")
+    _make_onefile_product(dist, "0.1.0-dev5")
+    _make_onedir_product(dist, "0.1.0-dev2")
     # 指定 dev2，即使 dev5 更新也应取 dev2
     target = dist / "0.1.0-dev2" / "mksaas"
-    assert target.is_file()
-    # sort_key 仅用于“最新”语义；指定版本走精确名匹配
+    assert target.is_dir()
     chosen = next((dist / v / "mksaas" for v in ["0.1.0-dev2"]
-                   if (dist / v / "mksaas").is_file()), None)
+                   if (dist / v / "mksaas").exists()), None)
     assert chosen == target
 
 
 def test_explicit_version_missing(tmp_path):
     """指定不存在的版本→应可判定为缺失（脚本侧报错）。"""
     dist = tmp_path / ".build" / "dist"
-    _make_product(dist, "0.1.0-dev1")
+    _make_onedir_product(dist, "0.1.0-dev1")
     assert not (dist / "0.9.9-dev1" / "mksaas").exists()
 
 
@@ -59,3 +63,13 @@ def test_install_help_mentions_explicit_version_example():
     )
     blob = out.stderr + out.stdout
     assert "0.1.0-dev1" in blob or "install.sh --version" in blob
+
+
+def test_install_help_mentions_source_default():
+    """--help 应明确默认安装源码入口。"""
+    out = subprocess.run(
+        ["bash", "install.sh", "--help"],
+        capture_output=True, text=True, check=True,
+    )
+    blob = out.stderr + out.stdout
+    assert "源码入口" in blob

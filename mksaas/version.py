@@ -1,7 +1,7 @@
-"""mksaas.version — 版本号约定与状态文件读写。
+"""mksaas.version — 版本号约定与构建配置读写。
 
 docs/build_install_upgrade_uninstall.md §3 为真相来源。
-VERSION 文件含 version(MAJOR.MINOR.PATCH) 与 build(整数)。
+build.config.json 含 version(MAJOR.MINOR.PATCH) 与 build(整数)。
 产物版本字符串：debug=<version>-dev<build>，release=<version>。
 """
 
@@ -20,24 +20,32 @@ class VersionError(Exception):
 
 
 def read_version(path: Path) -> Tuple[str, int]:
-    """读取 VERSION 文件，返回 (version, build)。"""
+    """读取 build 配置中的版本字段，返回 (version, build)。"""
     try:
         data = json.loads(Path(path).read_text(encoding="utf-8"))
         v = data["version"]
         b = int(data["build"])
     except (OSError, json.JSONDecodeError, KeyError, ValueError) as exc:
-        raise VersionError(f"VERSION 文件读取失败：{path} ({exc})") from exc
+        raise VersionError(f"构建配置读取失败：{path} ({exc})") from exc
     if not _VERSION_RE.match(v):
         raise VersionError(f"version 格式非法：{v}")
     return v, b
 
 
 def write_version(path: Path, version_str: str, build: int) -> None:
-    """回写 VERSION 文件。"""
-    Path(path).write_text(
-        json.dumps({"version": version_str, "build": build}, ensure_ascii=False, indent=2),
-        encoding="utf-8",
-    )
+    """回写 build 配置中的 version/build，并保留其余字段。"""
+    payload = {}
+    p = Path(path)
+    if p.is_file():
+        try:
+            current = json.loads(p.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            current = {}
+        if isinstance(current, dict):
+            payload.update(current)
+    payload["version"] = version_str
+    payload["build"] = build
+    p.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
 
 
 def version_string(version_str: str, build: int, release: bool = False) -> str:
@@ -48,7 +56,7 @@ def version_string(version_str: str, build: int, release: bool = False) -> str:
 
 
 def bump(version_str: str, level: str) -> Tuple[str, int]:
-    """提升版本号并重置 build=1。level: patch/minor/major。"""
+    """提升版本号并重置 build=0。level: patch/minor/major。"""
     m = _VERSION_RE.match(version_str)
     if not m:
         raise ValueError(f"version 格式非法：{version_str}")
@@ -64,7 +72,7 @@ def bump(version_str: str, level: str) -> Tuple[str, int]:
         patch = 0
     else:
         raise ValueError(f"未知 bump 位级：{level}")
-    return f"{major}.{minor}.{patch}", 1
+    return f"{major}.{minor}.{patch}", 0
 
 
 def product_path(dist_dir: str, version_str: str, build: int,
