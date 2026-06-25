@@ -2,7 +2,6 @@
   "app_name": "mksaas",
   "entry": "mksaas/__main__.py",
   "build_root": ".build",
-  "default_bundle_mode": "onedir",
   "version": "0.1.0",
-  "build": 3
+  "build": 1
 }

@@ -2,7 +2,7 @@
 
 import subprocess
 
-from mksaas import paths
+from mksaas import __version__
 from mksaas.cli import build_parser, main
 from mksaas.console import FakeConsole
 
@@ -11,7 +11,7 @@ def test_version_prints_and_exits_zero():
     c = FakeConsole()
     rc = main(["--version"], console=c)
     assert rc == 0
-    assert any("mksaas" in line for line in c.stdout)
+    assert c.stdout[-1] == f"mksaas {__version__}"
 
 
 def test_no_command_exits_nonzero():
@@ -21,7 +21,6 @@ def test_no_command_exits_nonzero():
 
 
 def test_unknown_command_is_unimplemented():
-    # 全部子命令已实现；这里验证 --version 与无命令分支已覆盖。
     # 用一个未注册的伪命令走 argparse 报错路径。
     import pytest
     with pytest.raises(SystemExit):
@@ -56,31 +55,3 @@ def test_env_help_mentions_examples_and_profile():
     assert "mksaas env core" in help_text
     assert "mksaas env github-oauth --profile prod" in help_text
     assert "目标 profile（test 或 prod）" in help_text
-
-
-def test_version_prefers_installed_product_metadata(monkeypatch):
-    """已安装发布产物时，--version 应优先显示安装版本。"""
-    monkeypatch.setattr(
-        paths,
-        "install_metadata",
-        lambda: {"installed_from": "0.1.0-dev2", "repo_root": "/tmp/repo"},
-    )
-    c = FakeConsole()
-    rc = main(["--version"], console=c)
-    assert rc == 0
-    assert c.stdout[-1] == "mksaas 0.1.0-dev2"
-
-
-def test_version_falls_back_to_repo_version(monkeypatch, tmp_path):
-    """源码态无已安装产物时，--version 应读取仓库 build.config.json。"""
-    version_file = tmp_path / "build.config.json"
-    version_file.write_text(
-        '{"app_name": "demo", "entry": "main.py", "version": "0.2.0", "build": 7}',
-        encoding="utf-8",
-    )
-    monkeypatch.setattr(paths, "install_metadata", lambda: {})
-    monkeypatch.setattr(paths, "repo_root", lambda: tmp_path)
-    c = FakeConsole()
-    rc = main(["--version"], console=c)
-    assert rc == 0
-    assert c.stdout[-1] == "mksaas 0.2.0-dev7"

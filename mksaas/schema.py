@@ -15,26 +15,32 @@ try:
 except ImportError as exc:  # pragma: no cover - 运行时硬依赖
     raise RuntimeError("缺少 PyYAML，请 pip install pyyaml") from exc
 
-# schema 文件相对仓库根：mksaas/schema.py -> 上两级 -> docs/env-schema.yaml
-_SCHEMA_PATH = Path(__file__).resolve().parent.parent / "docs" / "env-schema.yaml"
+
+def schema_path() -> Path:
+    """返回 schema 文件路径。
+
+    解析顺序：
+    1. 包内打包的 env-schema.yaml（安装/构建后）；
+    2. 仓库根 docs/env-schema.yaml（开发态：mksaas/schema.py -> 上两级 -> docs/）。
+    """
+    bundled = Path(__file__).resolve().parent / "env-schema.yaml"
+    if bundled.is_file():
+        return bundled
+    return Path(__file__).resolve().parent.parent / "docs" / "env-schema.yaml"
 
 
 class SchemaError(Exception):
     """schema 文件加载或结构异常。"""
 
 
-def schema_path() -> Path:
-    """返回 schema 文件路径。"""
-    return _SCHEMA_PATH
-
-
 @lru_cache(maxsize=1)
 def load_schema() -> List[Dict[str, Any]]:
     """加载并返回按 order 升序的 group 列表。"""
-    if not _SCHEMA_PATH.is_file():
-        raise SchemaError(f"schema 文件不存在：{_SCHEMA_PATH}")
+    path = schema_path()
+    if not path.is_file():
+        raise SchemaError(f"schema 文件不存在：{path}")
     try:
-        raw = yaml.safe_load(_SCHEMA_PATH.read_text(encoding="utf-8"))
+        raw = yaml.safe_load(path.read_text(encoding="utf-8"))
     except yaml.YAMLError as exc:
         raise SchemaError(f"schema 解析失败：{exc}") from exc
     groups = raw.get("groups") if isinstance(raw, dict) else None

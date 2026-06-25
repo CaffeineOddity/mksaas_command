@@ -1,0 +1,433 @@
+# MkSaaS 环境变量全集 schema
+#
+# 用途：本文件是环境变量的唯一真相来源（single source of truth）。
+#   - CLI 运行时加载本文件，作为 env 命令采集字段与 apply 全量重建 .env.* 的变量全集基线
+#   - docs/env-groups/*.md 描述采集流程与校验规则，变量清单以本文件为准；冲突时以本文件为准
+#
+# 字段约定（每个变量）：
+#   required:           是否必填。apply 在全量重建前校验：必填且空值则拦截
+#   default:            默认值。未采集/跳过的分组在 apply 重建时取此值；无 default 且非必填则写空串
+#   generate_if_empty:  空值时是否在 apply 阶段自动生成（仅 BETTER_AUTH_SECRET 等少数密钥）
+#   sensitive:          是否敏感字段。采集时隐藏输入，终端输出做摘要
+#   description:        变量用途说明（中文）
+#
+# group 标识符规范见 REQUIREMENTS.md §5.2：
+#   - group key 使用下划线形式（如 github_oauth），与 CLI 命令的连字符形式（github-oauth）一一映射
+#   - 遍历顺序固定为下方 01~17 的顺序
+
+groups:
+  - id: core
+    order: 1
+    variables:
+      - name: NEXT_PUBLIC_BASE_URL
+        required: true
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: 应用基础 URL
+
+  - id: database
+    order: 2
+    variables:
+      - name: DATABASE_URL
+        required: true
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: 数据库连接串
+
+  - id: better_auth
+    order: 3
+    variables:
+      - name: BETTER_AUTH_SECRET
+        required: true
+        default: ""
+        generate_if_empty: true
+        sensitive: true
+        description: Better Auth 密钥（空值时用 Python 安全随机数生成）
+
+  - id: github_oauth
+    order: 4
+    variables:
+      - name: GITHUB_CLIENT_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: GitHub OAuth client ID
+      - name: GITHUB_CLIENT_SECRET
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: GitHub OAuth client secret
+
+  - id: google_oauth
+    order: 5
+    variables:
+      - name: GOOGLE_CLIENT_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Google OAuth client ID
+      - name: GOOGLE_CLIENT_SECRET
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Google OAuth client secret
+
+  - id: email_newsletter
+    order: 6
+    variables:
+      - name: RESEND_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Resend API key
+      - name: BEEHIIV_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Beehiiv API key
+      - name: BEEHIIV_PUBLICATION_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Beehiiv publication ID
+
+  - id: storage
+    order: 7
+    variables:
+      - name: STORAGE_REGION
+        required: false
+        default: "auto"
+        generate_if_empty: false
+        sensitive: false
+        description: Storage region
+      - name: STORAGE_BUCKET_NAME
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Storage bucket name
+      - name: STORAGE_ACCESS_KEY_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Storage access key ID
+      - name: STORAGE_SECRET_ACCESS_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Storage secret access key
+      - name: STORAGE_ENDPOINT
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Storage endpoint
+      - name: STORAGE_PUBLIC_URL
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Storage public URL
+
+  - id: payment
+    order: 8
+    variables:
+      - name: STRIPE_SECRET_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Stripe secret key
+      - name: STRIPE_WEBHOOK_SECRET
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Stripe webhook secret
+      - name: NEXT_PUBLIC_STRIPE_PRICE_PRO_MONTHLY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe monthly price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_PRO_YEARLY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe yearly price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_LIFETIME
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe lifetime price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_BASIC
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe credits basic price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe credits standard price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe credits premium price ID
+      - name: NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Stripe credits enterprise price ID
+
+  - id: configurations
+    order: 9
+    variables:
+      - name: DISABLE_IMAGE_OPTIMIZATION
+        required: false
+        default: "false"
+        generate_if_empty: false
+        sensitive: false
+        description: Disable image optimization
+      - name: NEXT_PUBLIC_DEMO_WEBSITE
+        required: false
+        default: "false"
+        generate_if_empty: false
+        sensitive: false
+        description: Run as demo website
+
+  - id: analytics
+    order: 10
+    variables:
+      - name: NEXT_PUBLIC_GOOGLE_ANALYTICS_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Google Analytics ID
+      - name: NEXT_PUBLIC_UMAMI_WEBSITE_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Umami website ID
+      - name: NEXT_PUBLIC_UMAMI_SCRIPT
+        required: false
+        default: "https://cloud.umami.is/script.js"
+        generate_if_empty: false
+        sensitive: false
+        description: Umami script URL
+      - name: NEXT_PUBLIC_OPENPANEL_CLIENT_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: OpenPanel client ID
+      - name: NEXT_PUBLIC_PLAUSIBLE_DOMAIN
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Plausible domain
+      - name: NEXT_PUBLIC_PLAUSIBLE_SCRIPT
+        required: false
+        default: "https://plausible.io/js/script.js"
+        generate_if_empty: false
+        sensitive: false
+        description: Plausible script URL
+      - name: NEXT_PUBLIC_AHREFS_WEBSITE_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Ahrefs website ID
+      - name: NEXT_PUBLIC_SELINE_TOKEN
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Seline token
+      - name: NEXT_PUBLIC_DATAFAST_WEBSITE_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: DataFast website ID
+      - name: NEXT_PUBLIC_DATAFAST_DOMAIN
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: DataFast domain
+      - name: NEXT_PUBLIC_POSTHOG_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: PostHog key
+      - name: NEXT_PUBLIC_POSTHOG_HOST
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: PostHog host
+      - name: NEXT_PUBLIC_CLARITY_PROJECT_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Clarity project ID
+
+  - id: notification
+    order: 11
+    variables:
+      - name: DISCORD_WEBHOOK_URL
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Discord webhook URL
+      - name: FEISHU_WEBHOOK_URL
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Feishu webhook URL
+
+  - id: affiliate
+    order: 12
+    variables:
+      - name: NEXT_PUBLIC_AFFILIATE_AFFONSO_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Affonso affiliate ID
+      - name: NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: PromoteKit affiliate ID
+
+  - id: captcha
+    order: 13
+    variables:
+      - name: NEXT_PUBLIC_TURNSTILE_SITE_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Turnstile site key
+      - name: TURNSTILE_SECRET_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Turnstile secret key
+
+  - id: crisp
+    order: 14
+    variables:
+      - name: NEXT_PUBLIC_CRISP_WEBSITE_ID
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Crisp website ID
+
+  - id: cron_jobs
+    order: 15
+    variables:
+      - name: CRON_JOBS_USERNAME
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: Cron jobs username
+      - name: CRON_JOBS_PASSWORD
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Cron jobs password
+
+  - id: ai
+    order: 16
+    variables:
+      - name: AI_GATEWAY_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: AI gateway API key
+      - name: FAL_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: FAL API key
+      - name: FIREWORKS_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Fireworks API key
+      - name: OPENAI_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: OpenAI API key
+      - name: REPLICATE_API_TOKEN
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Replicate API token
+      - name: GOOGLE_GENERATIVE_AI_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Google Generative AI API key
+      - name: DEEPSEEK_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: DeepSeek API key
+      - name: OPENROUTER_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: OpenRouter API key
+
+  - id: firecrawl
+    order: 17
+    variables:
+      - name: FIRECRAWL_API_KEY
+        required: false
+        default: ""
+        generate_if_empty: false
+        sensitive: true
+        description: Firecrawl API key

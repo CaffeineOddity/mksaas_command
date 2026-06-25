@@ -1,0 +1,36 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "mksaas"
+version = "0.1.0.dev1"
+description = "MkSaaS 配置编排 CLI"
+requires-python = ">=3.10"
+license = "MIT"
+authors = [
+  { name = "your-name" }
+]
+dependencies = [
+  "pyyaml>=6.0",
+]
+
+[project.optional-dependencies]
+build = [
+  "build>=1.2.2"
+]
+publish = [
+  "twine>=5.1.0"
+]
+dev = [
+  "pytest>=9.0.0"
+]
+
+[project.scripts]
+mksaas = "mksaas.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["mksaas*"]
+
+[tool.setuptools.package-data]
+mksaas = ["env-schema.yaml"]

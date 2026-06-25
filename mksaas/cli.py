@@ -8,10 +8,9 @@ from __future__ import annotations
 
 import argparse
 import sys
-from pathlib import Path
 from typing import List, Optional
 
-from mksaas import paths, version
+from mksaas import __version__
 from mksaas.console import Console, TerminalConsole
 from mksaas.groups import groups_in_order, group_snake_to_kebab
 
@@ -76,39 +75,6 @@ def _env_groups_help_text() -> str:
     return "\n".join(lines)
 
 
-def _display_version() -> str:
-    """返回 CLI 当前应显示的版本字符串。"""
-    meta = paths.install_metadata()
-    installed_from = meta.get("installed_from")
-    if isinstance(installed_from, str) and installed_from and installed_from != "source":
-        return installed_from
-
-    repo_root = paths.repo_root()
-    if repo_root is not None:
-        config_file = repo_root / "build.config.json"
-        if config_file.is_file():
-            try:
-                version_str, build_num = version.read_version(config_file)
-            except version.VersionError:
-                pass
-            else:
-                return version.version_string(version_str, build_num, release=False)
-
-    source_root = Path(__file__).resolve().parent.parent
-    config_file = source_root / "build.config.json"
-    if config_file.is_file():
-        try:
-            version_str, build_num = version.read_version(config_file)
-        except version.VersionError:
-            pass
-        else:
-            return version.version_string(version_str, build_num, release=False)
-
-    if isinstance(installed_from, str) and installed_from:
-        return installed_from
-    return "unknown"
-
-
 def build_parser() -> argparse.ArgumentParser:
     """构造顶层 argparse 解析器并注册全部子命令。"""
     parser = argparse.ArgumentParser(
@@ -119,7 +85,7 @@ def build_parser() -> argparse.ArgumentParser:
             "  mksaas init\n"
             "  mksaas env github-oauth --profile prod\n"
             "  mksaas apply\n"
-            "  mksaas upgrade --local\n"
+            "  mksaas upgrade --local .\n"
             "\n"
             "使用 'mksaas <command> --help' 查看单个命令说明。"
         ),
@@ -178,17 +144,35 @@ def build_parser() -> argparse.ArgumentParser:
         formatter_class=HelpFormatter,
     )
 
-    upgrade = sub.add_parser(
-        "upgrade",
-        help="从本地构建产物升级",
-        description="从本地 .build/dist 构建产物升级当前安装。",
+    sub.add_parser(
+        "help",
+        help="显示帮助信息",
+        description="显示本 CLI 的帮助信息。",
         formatter_class=HelpFormatter,
     )
-    upgrade.add_argument("--local", action="store_true", help="从本地产物升级")
+    sub.add_parser(
+        "version",
+        help="打印当前版本号",
+        description="打印当前版本号。",
+        formatter_class=HelpFormatter,
+    )
+
+    upgrade = sub.add_parser(
+        "upgrade",
+        help="升级本 CLI（默认从 PyPI，--local 用本地构建产物）",
+        description="升级本 CLI：默认从 PyPI 拉取 release，或用 --local 从本地构建产物安装。",
+        formatter_class=HelpFormatter,
+    )
+    upgrade.add_argument("--version", default=None, help="升级到指定版本")
+    upgrade.add_argument(
+        "--local",
+        default=None,
+        help="从本地项目的构建产物升级（指向项目根路径）",
+    )
 
     sub.add_parser(
         "uninstall",
-        help="卸载本地安装",
+        help="卸载本 CLI",
         description="卸载本地安装的 mksaas 命令。",
         formatter_class=HelpFormatter,
     )
@@ -202,7 +186,7 @@ def main(argv: Optional[List[str]] = None, console: Optional[Console] = None) ->
     args = parser.parse_args(argv)
 
     if args.version:
-        console.print(f"mksaas {_display_version()}")
+        console.print(f"mksaas {__version__}")
         return 0
 
     if not args.command:
@@ -212,19 +196,32 @@ def main(argv: Optional[List[str]] = None, console: Optional[Console] = None) ->
     # 各子命令实现于 commands 包；未注册命令由 argparse 报错。
     from mksaas import commands as cmd
 
-    dispatch = {
+    if args.command == "help":
+        return cmd.run_help(parser)
+
+    # 业务命令采用 (args, console) 签名
+    business = {
         "init": cmd.run_init,
         "project": cmd.run_project,
         "env": cmd.run_env,
         "apply": cmd.run_apply,
+    }
+    handler = business.get(args.command)
+    if handler is not None:
+        return handler(args, console)
+
+    # 交付外壳命令采用 (args) 签名
+    shell = {
+        "version": cmd.run_version,
         "upgrade": cmd.run_upgrade,
         "uninstall": cmd.run_uninstall,
     }
-    handler = dispatch.get(args.command)
-    if handler is None:
-        console.print(f"命令 { args.command } 尚未实现")
-        return 2
-    return handler(args, console)
+    handler = shell.get(args.command)
+    if handler is not None:
+        return handler(args)
+
+    console.print(f"命令 { args.command } 尚未实现")
+    return 2
 
 
 if __name__ == "__main__":
