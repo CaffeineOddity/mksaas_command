@@ -78,3 +78,55 @@ def test_collect_group_keep_default_when_empty(tmp_path, monkeypatch):
     region = s["profiles"]["test"]["env_groups"]["storage"]["STORAGE_REGION"]
     assert region["value"] == "auto"
     assert region["source"] == "default"
+
+
+def test_collect_database_provider_writes(tmp_path, monkeypatch):
+    """database 选 Neon → 打开网页 → 输入 URL → 写入。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # choose 选 Neon(1) → getpass 输入 DATABASE_URL
+    c = FakeConsole(inputs=["1"], secrets=["postgresql://neon.example/db"])
+    changed = prompts.collect_group(s, "database", "test", c)
+    assert changed is True
+    assert opened == ["https://neon.com/"]
+    val = s["profiles"]["test"]["env_groups"]["database"]["DATABASE_URL"]
+    assert val["value"] == "postgresql://neon.example/db"
+    assert val["source"] == "prompt"
+
+
+def test_collect_database_empty_cancel(tmp_path, monkeypatch):
+    """database 空输入 → 确认放弃 → 不写入，回到分组菜单。"""
+    s = _fresh_state()
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: None)
+    # choose 选 Supabase(2) → getpass 空 → confirm 确认放弃(y)
+    c = FakeConsole(inputs=["2", "y"], secrets=[""])
+    changed = prompts.collect_group(s, "database", "test", c)
+    assert changed is False
+    assert "database" not in s["profiles"]["test"]["env_groups"]
+
+
+def test_collect_database_empty_retry_then_input(tmp_path, monkeypatch):
+    """database 空输入 → 不放弃(n) → 重新输入 URL。"""
+    s = _fresh_state()
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: None)
+    # choose 选 Neon(1) → getpass 空 → confirm 不放弃(n) → getpass 输入
+    c = FakeConsole(inputs=["1", "n"], secrets=["", "postgresql://retry.example/db"])
+    changed = prompts.collect_group(s, "database", "test", c)
+    assert changed is True
+    val = s["profiles"]["test"]["env_groups"]["database"]["DATABASE_URL"]
+    assert val["value"] == "postgresql://retry.example/db"
+
+
+def test_collect_database_manual_skip_provider(tmp_path, monkeypatch):
+    """database 选「跳过/手动输入」→ 不开网页 → 输入 URL。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # choose 选 跳过(3) → getpass 输入
+    c = FakeConsole(inputs=["3"], secrets=["postgresql://manual.example/db"])
+    changed = prompts.collect_group(s, "database", "test", c)
+    assert changed is True
+    assert opened == []
+    val = s["profiles"]["test"]["env_groups"]["database"]["DATABASE_URL"]
+    assert val["value"] == "postgresql://manual.example/db"

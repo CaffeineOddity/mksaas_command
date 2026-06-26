@@ -214,8 +214,20 @@ def _ask_apply_after_end(console: Console, data: dict, init_step: dict, sp) -> i
 
 
 def _group_collected(data: dict, gid: str, profile: str) -> bool:
-    """该分组在指定 profile 是否已采集。"""
-    return gid in data.get("profiles", {}).get(profile, {}).get("env_groups", {})
+    """该分组在指定 profile 是否已采集：必填变量均非空才算已采集。
+
+    无必填变量的分组：有任意非空值即算已采集；否则需所有必填变量非空。
+    避免空值被标记为已采集（如 DATABASE_URL=<empty>）。
+    """
+    from mksaas.schema import find_group
+    fields = data.get("profiles", {}).get(profile, {}).get("env_groups", {}).get(gid, {})
+    if not fields:
+        return False
+    variables = find_group(gid).get("variables", [])
+    required_names = [v["name"] for v in variables if v.get("required")]
+    if required_names:
+        return all((fields.get(n, {}).get("value") or "").strip() for n in required_names)
+    return any((f.get("value") or "").strip() for f in fields.values())
 
 
 def _print_group_overview(console: Console, data: dict, gid: str) -> None:
@@ -233,8 +245,17 @@ def _print_group_overview(console: Console, data: dict, gid: str) -> None:
     console.print(f"变量：{total} 个（必填 {required_n}）")
     for profile in ("test", "prod"):
         fields = data.get("profiles", {}).get(profile, {}).get("env_groups", {}).get(gid, {})
-        if not fields:
-            console.print(f"  {profile}=未采集")
+        if not _group_collected(data, gid, profile):
+            # 未采集：但仍可能有部分残值，展示出来
+            if fields:
+                parts = []
+                for name, field in fields.items():
+                    raw = field.get("value", "")
+                    shown = mask(raw) if name in sensitive_names else (raw or "<empty>")
+                    parts.append(f"{name}={shown}")
+                console.print(f"  {profile}=未采集（缺必填）  {'; '.join(parts)}")
+            else:
+                console.print(f"  {profile}=未采集")
             continue
         parts = []
         for name, field in fields.items():
