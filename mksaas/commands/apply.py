@@ -24,7 +24,7 @@ def _now() -> str:
 def _summarize(console: Console, data: dict) -> None:
     """汇总将被应用的配置与 push 计划（敏感字段 mask）。"""
     proj = data.get("project", {})
-    console.print("==== apply 摘要 ====")
+    console.header("apply 摘要")
     for profile in ("test", "prod"):
         groups = data.get("profiles", {}).get(profile, {}).get("env_groups", {})
         console.print(f"[{profile}] 已采集分组：{', '.join(groups.keys()) or '(无)'}")
@@ -34,7 +34,6 @@ def _summarize(console: Console, data: dict) -> None:
                 shown = mask(val) if field.get("sensitive") else (val or "<empty>")
                 console.print(f"  {profile}/{gid}/{name} = {shown}")
     console.print(f"push 计划：should_push={proj.get('should_push')} repo_url={proj.get('repo_url') or '(空)'}")
-    console.print("====================")
 
 
 def run_apply(args: Any, console: Console) -> int:

@@ -12,27 +12,7 @@ from typing import List, Optional
 
 from mksaas import __version__
 from mksaas.console import Console, TerminalConsole
-from mksaas.groups import groups_in_order, group_snake_to_kebab
-
-_ENV_GROUP_SUMMARIES = {
-    "core": "基础站点 URL 与回调地址",
-    "database": "数据库连接",
-    "better_auth": "认证密钥与鉴权核心配置",
-    "github_oauth": "GitHub 登录配置",
-    "google_oauth": "Google 登录配置",
-    "email_newsletter": "邮件与订阅配置",
-    "storage": "对象存储配置",
-    "payment": "支付配置",
-    "configurations": "通用业务开关与运行配置",
-    "analytics": "统计分析配置",
-    "notification": "通知渠道配置",
-    "affiliate": "联盟分销配置",
-    "captcha": "人机验证配置",
-    "crisp": "Crisp 在线客服配置",
-    "cron_jobs": "定时任务鉴权配置",
-    "ai": "AI 模型与密钥配置",
-    "firecrawl": "Firecrawl 抓取配置",
-}
+from mksaas.groups import GROUP_SUMMARIES, groups_in_order, group_snake_to_kebab
 
 
 class HelpFormatter(argparse.RawTextHelpFormatter):
@@ -64,14 +44,27 @@ class HelpFormatter(argparse.RawTextHelpFormatter):
 
 
 def _env_groups_help_text() -> str:
-    """生成 env 子命令 help 中展示的可用分组列表。"""
+    """生成 env 子命令 help 中展示的可用分组列表（含必填标记）。
+
+    必填标记从 env-schema.yaml 读取：组内任一变量 required 即标 [必填]。
+    """
+    from mksaas.groups import is_required_group
+    from mksaas.schema import load_schema
+
+    schema_groups = {g["id"]: g for g in load_schema()}
     group_ids = groups_in_order()
     width = max(len(group_snake_to_kebab(group_id)) for group_id in group_ids)
     lines = []
     for group_id in group_ids:
         kebab = group_snake_to_kebab(group_id)
-        summary = _ENV_GROUP_SUMMARIES[group_id]
-        lines.append(f"  {kebab.ljust(width)}  {summary}")
+        summary = GROUP_SUMMARIES[group_id]
+        required_tag = "[必填]" if is_required_group(group_id) else "[可选]"
+        # 统计变量数与必填变量数
+        variables = schema_groups.get(group_id, {}).get("variables", [])
+        total = len(variables)
+        req_n = sum(1 for v in variables if v.get("required"))
+        var_info = f"{total} 变量" + (f"，必填 {req_n}" if req_n else "")
+        lines.append(f"  {kebab.ljust(width)}  {required_tag} {summary}（{var_info}）")
     return "\n".join(lines)
 
 

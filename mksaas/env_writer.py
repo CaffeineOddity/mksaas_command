@@ -38,8 +38,20 @@ def _resolve_value(var: Dict[str, Any], collected: Dict[str, Any], profile: str,
         state["profiles"][profile]["env_groups"][group_id][name] = field
 
     if not value:
-        value = var.get("default") or ""
+        value = _schema_default(var, profile)
     return value
+
+
+def _schema_default(var: Dict[str, Any], profile: str) -> str:
+    """取该变量在指定 profile 的 schema 默认值（test_default / prod_default）。
+
+    兼容旧 schema：无 test_default/prod_default 时回退到 default。
+    """
+    key = "test_default" if profile == "test" else "prod_default"
+    val = var.get(key)
+    if val is None:
+        val = var.get("default", "")
+    return val or ""
 
 
 def rebuild_envs(state: Dict[str, Any], schema: List[Dict[str, Any]],

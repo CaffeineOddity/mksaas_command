@@ -60,11 +60,16 @@ def test_rebuild_deletes_old_vars(tmp_path):
 
 
 def test_required_missing_reported(tmp_path):
-    """必填缺失→返回缺失列表，不写该变量。"""
-    s = state.init_default()  # core 的 NEXT_PUBLIC_BASE_URL 必填且未采集
+    """必填缺失→返回缺失列表，不写该变量。
+
+    注：NEXT_PUBLIC_BASE_URL 有 schema 默认 http://localhost:3000，
+    故仅 DATABASE_URL（无默认）出现在缺失列表。
+    """
+    s = state.init_default()  # core 的 NEXT_PUBLIC_BASE_URL 必填但未采集（取默认）
     missing = env_writer.rebuild_envs(s, load_schema(), tmp_path)
-    assert "NEXT_PUBLIC_BASE_URL" in missing["test"]
     assert "DATABASE_URL" in missing["test"]
+    # NEXT_PUBLIC_BASE_URL 有默认值，不视为缺失
+    assert "NEXT_PUBLIC_BASE_URL" not in missing["test"]
 
 
 def test_better_auth_generate_if_empty(tmp_path):

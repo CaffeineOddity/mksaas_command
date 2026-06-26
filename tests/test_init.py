@@ -1,15 +1,20 @@
-"""tests.test_init — mksaas init 编排器测试。"""
+"""tests.test_init — mksaas init 编排器测试。
+
+init 每次都从头走：project（展示已有信息 → 修改 repo url / 下一步 / 结束）
+→ 全部 env 分组（每分组：[采集|修改] test / [采集|修改] prod / 下一步 / 结束）
+→ apply。
+"""
 
 from __future__ import annotations
 
 import argparse
-from pathlib import Path
 
 import pytest
 
 from mksaas import state
 from mksaas.commands import init as init_cmd
 from mksaas.console import FakeConsole
+from mksaas.groups import groups_in_order
 
 
 def make_args():
@@ -17,7 +22,7 @@ def make_args():
 
 
 def _seed_project(tmp_path):
-    """就位一个有效项目目录，返回其路径与状态文件。"""
+    """就位一个有效项目目录（project 已完成，core/database/better_auth 已采集）。"""
     state.ensure_state_dir(tmp_path)
     sp = tmp_path / state.STATE_DIRNAME / state.STATE_FILENAME
     s = state.init_default()
@@ -25,7 +30,6 @@ def _seed_project(tmp_path):
                     "project_dir": str(tmp_path),
                     "apply_strategy": "existing_local", "should_push": False}
     s["steps"]["project"]["status"] = "completed"
-    # 填满必填
     for prof, url in (("test", "https://t.com"), ("prod", "https://p.com")):
         s["profiles"][prof]["env_groups"]["core"] = {
             "NEXT_PUBLIC_BASE_URL": {"value": url, "source": "prompt",
@@ -41,102 +45,214 @@ def _seed_project(tmp_path):
     return tmp_path, sp
 
 
-def test_init_project_mandatory_cannot_skip(tmp_path, monkeypatch):
-    """project 必填不可跳；拒绝→终止。"""
-    monkeypatch.chdir(tmp_path)
-    # 无状态文件 → init 调 project；project 采集时空 repo_url 再空回填 → 取消
-    c = FakeConsole(inputs=["", ""])
-    rc = init_cmd.run_init(make_args(), c)
-    assert rc != 0
+def _seed_empty_required(tmp_path):
+    """就位 project 完成但所有 env 分组均未采集的状态。"""
+    state.ensure_state_dir(tmp_path)
+    sp = tmp_path / state.STATE_DIRNAME / state.STATE_FILENAME
+    s = state.init_default()
+    s["project"] = {"repo_url": "https://github.com/o/r.git",
+                    "project_dir": str(tmp_path),
+                    "apply_strategy": "existing_local", "should_push": False}
+    s["steps"]["project"]["status"] = "completed"
+    state.save(sp, s)
+    return tmp_path, sp
 
 
-def test_init_runs_env_groups_skippable(tmp_path, monkeypatch):
-    """逐个 env 分组可处理或跳过；跳过记 env_groups_skipped。"""
+# 每分组菜单固定 4 项：[采集|修改]test(1) / [采集|修改]prod(2) / 下一步(3) / 结束(4)
+# 已采集分组：1=修改test 2=修改prod；未采集分组：1=采集test 2=采集prod
+
+
+def test_init_walks_all_groups_next(tmp_path, monkeypatch):
+    """project 下一步 + 每个已采集分组都选「下一步」(3) → 走完全部 → apply 暂不。"""
     proj_dir, sp = _seed_project(tmp_path)
     monkeypatch.chdir(proj_dir)
-
-    # 用桩替换 project/env/apply 的实际执行
     called = {"env": [], "apply": False}
-    monkeypatch.setattr(init_cmd, "_run_project_step", lambda console: 0)
     monkeypatch.setattr(init_cmd, "_run_env_step",
-                        lambda gid, console: called["env"].append(gid) or 0)
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
     monkeypatch.setattr(init_cmd, "_run_apply_step",
                         lambda console: called.__setitem__("apply", True) or 0)
 
-    # 对每个分组：确认处理(第一个) / 跳过(其余)
-    from mksaas.groups import groups_in_order
-    n = len(groups_in_order())
-    inputs = []
-    inputs.append("y")  # 处理 core
-    for _ in range(n - 1):
-        inputs.append("n")  # 跳过其余
-    inputs.append("n")  # apply 前确认 → 暂不执行
-
+    inputs = ["2"]  # project 下一步
+    inputs += ["3"] * len(groups_in_order())  # 每个分组下一步
+    inputs.append("2")  # apply 暂不
     c = FakeConsole(inputs=inputs)
     rc = init_cmd.run_init(make_args(), c)
     assert rc == 0
-    assert called["env"] == ["core"]
+    assert called["env"] == []
     assert called["apply"] is False
-    data = state.load(sp)
-    skipped = data["steps"]["init"]["env_groups_skipped"]
-    assert "database" in skipped  # 其余被跳过
+
+
+def test_init_modify_test_of_group(tmp_path, monkeypatch):
+    """project 下一步；对 core 选「修改 test」(1)→采集 test；其余下一步；apply 暂不。"""
+    proj_dir, sp = _seed_project(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": []}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
+
+    inputs = ["2"]  # project 下一步
+    inputs.append("1")  # core 修改 test
+    inputs += ["3"] * (len(groups_in_order()) - 1)  # 其余下一步
+    inputs.append("2")  # apply 暂不
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    assert called["env"] == [("core", "test")]
+
+
+def test_init_collect_test_stays_on_group(tmp_path, monkeypatch):
+    """未采集分组：选采集 test(1) 后停留在该分组（再次出菜单），选结束(4)。"""
+    proj_dir, sp = _seed_empty_required(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": []}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
+
+    # project 下一步(2)；core 采集 test(1) → 停留 → 结束(4) → apply 暂不(2)
+    inputs = ["2", "1", "4", "2"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    # 只在 core 上采集 test 一次；停留后选结束，未进入其它分组
+    assert called["env"] == [("core", "test")]
+    assert state.load(sp)["steps"]["init"]["ended_early"] is True
+
+
+def test_init_end_early_runs_apply(tmp_path, monkeypatch):
+    """选「结束」(4) 后询问 apply，选执行→进 apply；后续分组未被处理。"""
+    proj_dir, sp = _seed_empty_required(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": [], "apply": False}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step",
+                        lambda console: called.__setitem__("apply", True) or 0)
+
+    # project 下一步(2)；core 采集 test(1)→停留→结束(4) → apply 执行(1)
+    inputs = ["2", "1", "4", "1"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    assert called["env"] == [("core", "test")]
+    assert called["apply"] is True
+    assert state.load(sp)["steps"]["init"]["ended_early"] is True
+
+
+def test_init_end_early_defer_apply(tmp_path, monkeypatch):
+    """选「结束」后询问 apply，选暂不→不进 apply。"""
+    proj_dir, sp = _seed_empty_required(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"apply": False}
+    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, profile, console: 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step",
+                        lambda console: called.__setitem__("apply", True) or 0)
+
+    # project 下一步(2)；core 采集 test(1)→停留→结束(4) → apply 暂不(2)
+    inputs = ["2", "1", "4", "2"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    assert called["apply"] is False
 
 
 def test_init_apply_confirm_runs_apply(tmp_path, monkeypatch):
-    """apply 前确认 yes→执行 apply。"""
+    """走完全部分组 → apply 确认执行→执行 apply。"""
     proj_dir, sp = _seed_project(tmp_path)
     monkeypatch.chdir(proj_dir)
-    monkeypatch.setattr(init_cmd, "_run_project_step", lambda console: 0)
-    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, console: 0)
     ran = {"apply": False}
+    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, profile, console: 0)
     monkeypatch.setattr(init_cmd, "_run_apply_step",
                         lambda console: ran.__setitem__("apply", True) or 0)
 
-    from mksaas.groups import groups_in_order
-    inputs = ["n"] * len(groups_in_order())  # 全部跳过
-    inputs.append("y")  # apply 确认 yes
+    inputs = ["2"]  # project 下一步
+    inputs += ["3"] * len(groups_in_order())  # 每个分组下一步
+    inputs.append("1")  # apply 执行
     c = FakeConsole(inputs=inputs)
     rc = init_cmd.run_init(make_args(), c)
     assert rc == 0
     assert ran["apply"] is True
 
 
-def test_init_resume_progress(tmp_path, monkeypatch):
-    """续跑：已有 steps.init 进度时从断点继续。"""
-    proj_dir, sp = _seed_project(tmp_path)
-    # 预置：core 已处理，其余待处理
-    s = state.load(sp)
-    s["steps"]["init"]["env_groups_processed"] = ["core"]
-    state.save(sp, s)
-    monkeypatch.chdir(proj_dir)
-    monkeypatch.setattr(init_cmd, "_run_project_step", lambda console: 0)
-    called = []
-    monkeypatch.setattr(init_cmd, "_run_env_step",
-                        lambda gid, console: called.append(gid) or 0)
-    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
-
-    from mksaas.groups import groups_in_order
-    remaining = [g for g in groups_in_order() if g != "core"]
-    inputs = ["n"] * len(remaining)  # 跳过所有剩余
-    inputs.append("n")  # apply 暂不
-    c = FakeConsole(inputs=inputs)
-    init_cmd.run_init(make_args(), c)
-    # core 不应被再次处理
-    assert "core" not in called
-
-
 def test_init_summary_masks_secrets(tmp_path, monkeypatch):
     """摘要不泄露密钥。"""
     proj_dir, sp = _seed_project(tmp_path)
     monkeypatch.chdir(proj_dir)
-    monkeypatch.setattr(init_cmd, "_run_project_step", lambda console: 0)
-    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, console: 0)
+    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, profile, console: 0)
     monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
 
-    from mksaas.groups import groups_in_order
-    inputs = ["n"] * len(groups_in_order())
-    inputs.append("n")
+    inputs = ["2"] + ["3"] * len(groups_in_order()) + ["2"]
     c = FakeConsole(inputs=inputs)
     init_cmd.run_init(make_args(), c)
     blob = "\n".join(c.stdout)
     assert "postgres://x" not in blob  # database url 不泄露
+
+
+def test_init_project_end_early(tmp_path, monkeypatch):
+    """project 步骤选「结束」→ 询问 apply，不进 env。"""
+    proj_dir, sp = _seed_project(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": [], "apply": False}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step",
+                        lambda console: called.__setitem__("apply", True) or 0)
+
+    # project 菜单 修改 repo url/下一步/结束 → 选结束(3) → apply 暂不(2)
+    inputs = ["3", "2"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    assert called["env"] == []
+    assert called["apply"] is False
+    assert state.load(sp)["steps"]["init"]["ended_early"] is True
+
+
+def test_init_project_modify_repo_url(tmp_path, monkeypatch):
+    """project 选「修改 repo url」→ 输入新地址；成功更新后继续 env。"""
+    proj_dir, sp = _seed_project(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": 0}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called.__setitem__("env", called["env"] + 1) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
+
+    # project 修改 repo url(1) → 预填当前值，输入新地址；每个分组下一步(3)；apply 暂不(2)
+    inputs = ["1", "git@gitcafe:o/new.git"]
+    inputs += ["3"] * len(groups_in_order())
+    inputs.append("2")
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    data = state.load(sp)
+    assert data["project"]["repo_url"] == "git@gitcafe:o/new.git"
+    assert called["env"] == 0
+
+
+def test_init_project_modify_repo_url_cancel(tmp_path, monkeypatch):
+    """project 修改 repo url 但留空（沿用当前值）→ 取消，不更新。"""
+    proj_dir, sp = _seed_project(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    monkeypatch.setattr(init_cmd, "_run_env_step", lambda gid, profile, console: 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
+
+    original = state.load(sp)["project"]["repo_url"]
+    # 修改(1) → 留空（FakeConsole.input 留空返回 default=当前值，视为取消）
+    # 用一个与当前值相同的输入模拟取消
+    inputs = ["1", original]
+    inputs += ["3"] * len(groups_in_order())
+    inputs.append("2")
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    assert state.load(sp)["project"]["repo_url"] == original
+
+
+def test_init_no_state_runs_project(tmp_path, monkeypatch):
+    """无状态文件 → 必须先跑 project；project 失败→终止。"""
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setattr(init_cmd, "_run_project_step", lambda console: 1)
+    c = FakeConsole(inputs=[])
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc != 0

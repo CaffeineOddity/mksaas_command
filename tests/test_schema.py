@@ -22,8 +22,8 @@ def test_load_schema_returns_17_groups_in_order():
 def test_each_variable_has_required_fields():
     for g in load_schema():
         for v in g["variables"]:
-            for field in ("name", "required", "default", "generate_if_empty",
-                          "sensitive", "description"):
+            for field in ("name", "required", "test_default", "prod_default",
+                          "generate_if_empty", "sensitive", "description"):
                 assert field in v, f"{g['id']}/{v.get('name')} 缺 {field}"
 
 

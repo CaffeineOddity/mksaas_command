@@ -53,5 +53,28 @@ def test_fake_console_confirm_empty_uses_default():
 
 def test_terminal_console_has_same_methods():
     t = TerminalConsole()
-    for m in ("print", "input", "getpass", "confirm"):
+    for m in ("print", "header", "input", "getpass", "confirm", "choose"):
         assert hasattr(t, m), f"TerminalConsole 缺方法 {m}"
+
+
+def test_fake_console_header_records_blank_line_then_text():
+    c = FakeConsole()
+    c.header("分组 core")
+    assert c.stdout == ["", "=== 分组 core ==="]
+
+
+def test_fake_console_choose_returns_index():
+    c = FakeConsole(inputs=["2"])
+    assert c.choose("选", ["处理", "跳过", "结束"]) == 2
+
+
+def test_fake_console_choose_empty_uses_default():
+    c = FakeConsole(inputs=[""])
+    assert c.choose("选", ["处理", "跳过"], default=2) == 2
+
+
+def test_fake_console_choose_invalid_uses_default():
+    c = FakeConsole(inputs=["x", "9", "0"])
+    assert c.choose("选", ["处理", "结束"], default=1) == 1
+    assert c.choose("选", ["处理", "结束"], default=1) == 1
+    assert c.choose("选", ["处理", "结束"], default=2) == 2

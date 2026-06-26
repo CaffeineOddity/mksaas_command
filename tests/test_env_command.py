@@ -27,11 +27,9 @@ def _seed_project(tmp_path):
 
 
 def test_env_writes_to_profile_test(tmp_path, monkeypatch):
-    """mksaas env core --profile test 写入 profiles.test。"""
+    """mksaas env core --profile test 只采集 test。"""
     sp = _seed_project(tmp_path)
     monkeypatch.chdir(tmp_path)
-    c = FakeConsole(inputs=["y", "https://localhost:3000"])  # 修改 + base url
-    # 无已有值 → 直接采集
     c = FakeConsole(inputs=["https://localhost:3000"])
     rc = env_cmd.run_env(make_args("core", "test"), c)
     assert rc == 0
@@ -44,7 +42,7 @@ def test_env_kebab_group_maps_to_snake(tmp_path, monkeypatch):
     """连字符形式 github-oauth → github_oauth。"""
     sp = _seed_project(tmp_path)
     monkeypatch.chdir(tmp_path)
-    c = FakeConsole(inputs=["id123"], secrets=["secret"])  # client_id input, client_secret getpass
+    c = FakeConsole(inputs=["id123"], secrets=["secret"])
     rc = env_cmd.run_env(make_args("github-oauth", "test"), c)
     assert rc == 0
     data = state.load(sp)
@@ -54,7 +52,7 @@ def test_env_kebab_group_maps_to_snake(tmp_path, monkeypatch):
 
 
 def test_env_default_profile_is_test(tmp_path, monkeypatch):
-    """缺省 profile → 默认 test。"""
+    """缺省 profile → 默认 test，只采集 test。"""
     sp = _seed_project(tmp_path)
     monkeypatch.chdir(tmp_path)
     c = FakeConsole(inputs=["https://x.com"])

@@ -52,3 +52,42 @@ def group_kebab_to_snake(group_id: str) -> str:
     if group_id not in _TO_SNAKE:
         raise KeyError(group_id)
     return _TO_SNAKE[group_id]
+
+
+# 分组中文摘要（供 init 概要展示与 env help 复用，单一来源）。
+GROUP_SUMMARIES = {
+    "core": "基础站点 URL 与回调地址",
+    "database": "数据库连接",
+    "better_auth": "认证密钥与鉴权核心配置",
+    "github_oauth": "GitHub 登录配置",
+    "google_oauth": "Google 登录配置",
+    "email_newsletter": "邮件与订阅配置",
+    "storage": "对象存储配置",
+    "payment": "支付配置",
+    "configurations": "通用业务开关与运行配置",
+    "analytics": "统计分析配置",
+    "notification": "通知渠道配置",
+    "affiliate": "联盟分销配置",
+    "captcha": "人机验证配置",
+    "crisp": "Crisp 在线客服配置",
+    "cron_jobs": "定时任务鉴权配置",
+    "ai": "AI 模型与密钥配置",
+    "firecrawl": "Firecrawl 抓取配置",
+}
+
+
+def group_summary(group_id: str) -> str:
+    """返回分组的中文摘要，未知抛 KeyError。"""
+    if group_id not in GROUP_SUMMARIES:
+        raise KeyError(group_id)
+    return GROUP_SUMMARIES[group_id]
+
+
+def is_required_group(group_id: str) -> bool:
+    """该分组是否含必填变量（core/database/better_auth 等必填组）。
+
+    通过 schema 判定：组内任一 variable.required 为真即为必填组。
+    """
+    from mksaas.schema import find_group  # 延迟导入避免循环
+    group = find_group(group_id)
+    return any(bool(v.get("required")) for v in group.get("variables", []))
