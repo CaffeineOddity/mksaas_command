@@ -1,8 +1,8 @@
-# GitHub OAuth 环境分组需求
+# Google OAuth 环境分组需求
 
 ## 1. 目标
 
-本分组定义 `GitHub OAuth` 相关环境变量的采集、确认、回写与最终落地规则。
+本分组定义 `Google OAuth` 相关环境变量的采集、确认、回写与最终落地规则。
 
 ## 2. 参考说明
 
@@ -20,7 +20,7 @@
 ## 3. 独立命令
 
 ```bash
-mksaas env github-oauth [--profile test|prod]
+mksaas env google-oauth [--profile test|prod]
 ```
 
 要求：
@@ -32,8 +32,8 @@ mksaas env github-oauth [--profile test|prod]
 
 ## 4. 变量范围
 
-1. `GITHUB_CLIENT_ID`
-2. `GITHUB_CLIENT_SECRET`
+1. `GOOGLE_CLIENT_ID`
+2. `GOOGLE_CLIENT_SECRET`
 
 ## 5. 采集流程说明
 
@@ -43,23 +43,25 @@ mksaas env github-oauth [--profile test|prod]
 2. 按“已存在值 / 未配置值 / 自动生成值”三类展示当前状态
 3. 告知用户本分组对应的变量用途，并提示是否需要先去官方文档或第三方平台创建配置
 4. 用户选择沿用已有值，或进入修改流程逐项填写
-5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
-6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
-7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
-8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
+5. 进入采集流程时，由 CLI 自动打开 Google Cloud Console 凭据创建地址 `https://console.cloud.google.com/apis/credentials`，等用户在浏览器创建 OAuth 客户端并拿到 Client ID / Client Secret 后回填
+6. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
+7. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
+8. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
+9. apply 完成后，支持通过 `pnpm run dev` 做环境验证
 
 ## 6. 流程图
 
 ```mermaid
 flowchart TD
-    A[执行 mksaas env github-oauth] --> B[读取 setup-state.json]
-    B --> C{是否已有 GitHub OAuth 配置}
+    A[执行 mksaas env google-oauth] --> B[读取 setup-state.json]
+    B --> C{是否已有 Google OAuth 配置}
     C -->|是| D[展示已有值与变量用途]
-    C -->|否| E[进入 GitHub OAuth 采集流程]
+    C -->|否| E[进入 Google OAuth 采集流程]
     D --> F{是否修改}
     F -->|否| G[沿用已有配置]
     F -->|是| E
-    E --> H[逐项采集并校验输入]
+    E --> O[CLI 自动打开 console.cloud.google.com/apis/credentials]
+    O --> H[逐项采集并校验输入]
     H --> I[更新 JSON 对应分组]
     G --> I
     I --> J[标记已采集未应用]
@@ -73,36 +75,37 @@ sequenceDiagram
     participant U as 用户
     participant C as CLI
     participant J as setup-state.json
-    participant D as 官方文档/第三方平台
+    participant G as Google Cloud Console
 
-    U->>C: mksaas env github-oauth
-    C->>J: 读取 github-oauth 分组配置
+    U->>C: mksaas env google-oauth
+    C->>J: 读取 google-oauth 分组配置
     J-->>C: 返回已有值或空结果
     C->>U: 展示已有值、变量用途与缺失项
     U->>C: 选择沿用或修改
     alt 需要补充配置
-        C->>U: 提示前往官方文档或平台创建配置
-        U->>D: 获取所需参数
+        C->>G: 自动打开 console.cloud.google.com/apis/credentials
+        U->>G: 在浏览器创建 OAuth 客户端，拿到 Client ID / Secret
         U->>C: 回填字段值
     end
     C->>C: 校验字段格式与必填项
-    C->>J: 回写 github-oauth 分组配置
+    C->>J: 回写 google-oauth 分组配置
     C-->>U: 提示需在 apply 阶段统一落地并可用 pnpm run dev 验证
 ```
 
 ## 8. 采集要求
 
-1. 若已有配置，先展示 `CLIENT_ID` 摘要与 `CLIENT_SECRET` 已配置状态
-2. 支持启用或禁用 GitHub OAuth
-3. 提示用户先到 GitHub Developers 创建应用并获取参数
+1. 支持启用或禁用 Google OAuth
+2. 若已有配置，先展示摘要并确认是否修改
+3. 进入采集流程时由 CLI 自动打开 `https://console.cloud.google.com/apis/credentials`，等用户创建 OAuth 客户端后回填 Client ID / Client Secret
+4. 创建客户端时所需的 Authorized redirect URI 取自当前 profile 的 `NEXT_PUBLIC_BASE_URL` + `/api/auth/callback/google`，由 CLI 在打开前提示用户填入
 
 ## 9. 生成要求
 
-1. `GITHUB_CLIENT_ID` 与 `GITHUB_CLIENT_SECRET` 统一写入 `.env.*`
+1. `GOOGLE_CLIENT_ID` 与 `GOOGLE_CLIENT_SECRET` 统一写入 `.env.*`
 2. 未启用时可跳过输出
 
 ## 10. 安全要求
 
-1. 不得在终端打印完整 secret
-2. 终端输出以已配置状态展示
+1. 不得输出完整 secret
+2. 终端输出以摘要形式展示
 

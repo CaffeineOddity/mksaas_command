@@ -1,21 +1,22 @@
 """mksaas.groups — 分组标识符连字符↔下划线映射与固定顺序。
 
 REQUIREMENTS §5.2：group key 用下划线，CLI 命令用连字符，二者一一映射；
-CLI 与 apply 遍历顺序固定为 01~17 文档序号。
+CLI 与 apply 遍历顺序固定为 01~18 文档序号。
 """
 
 from __future__ import annotations
 
 from typing import List
 
-# 固定顺序（与 docs/env-groups/01~17 一致），同时也是映射基准。
+# 固定顺序（与 docs/env-groups/01~18 一致），同时也是映射基准。
 _GROUP_ORDER: List[str] = [
     "core",
     "database",
     "better_auth",
     "github_oauth",
     "google_oauth",
-    "email_newsletter",
+    "email",
+    "newsletter",
     "storage",
     "payment",
     "configurations",
@@ -61,7 +62,8 @@ GROUP_SUMMARIES = {
     "better_auth": "认证密钥与鉴权核心配置",
     "github_oauth": "GitHub 登录配置",
     "google_oauth": "Google 登录配置",
-    "email_newsletter": "邮件与订阅配置",
+    "email": "事务邮件配置（Resend）",
+    "newsletter": "订阅与 Newsletter 配置（Beehiiv）",
     "storage": "对象存储配置",
     "payment": "支付配置",
     "configurations": "通用业务开关与运行配置",

@@ -130,11 +130,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="目标 profile（test 或 prod）",
     )
 
-    sub.add_parser(
+    apply = sub.add_parser(
         "apply",
         help="统一执行落地",
         description="根据当前状态统一执行落地操作。",
         formatter_class=HelpFormatter,
+    )
+    apply.add_argument(
+        "--profile",
+        choices=["test", "prod"],
+        default=None,
+        help="目标 profile（test 或 prod），仅校验该 profile 的必填项；缺省为 test",
     )
 
     sub.add_parser(

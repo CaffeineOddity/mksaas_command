@@ -27,8 +27,7 @@ def _seed_project(tmp_path):
     sp = tmp_path / state.STATE_DIRNAME / state.STATE_FILENAME
     s = state.init_default()
     s["project"] = {"repo_url": "https://github.com/o/r.git",
-                    "project_dir": str(tmp_path),
-                    "apply_strategy": "existing_local", "should_push": False}
+                    "project_dir": str(tmp_path)}
     s["steps"]["project"]["status"] = "completed"
     for prof, url in (("test", "https://t.com"), ("prod", "https://p.com")):
         s["profiles"][prof]["env_groups"]["core"] = {
@@ -51,15 +50,15 @@ def _seed_empty_required(tmp_path):
     sp = tmp_path / state.STATE_DIRNAME / state.STATE_FILENAME
     s = state.init_default()
     s["project"] = {"repo_url": "https://github.com/o/r.git",
-                    "project_dir": str(tmp_path),
-                    "apply_strategy": "existing_local", "should_push": False}
+                    "project_dir": str(tmp_path)}
     s["steps"]["project"]["status"] = "completed"
     state.save(sp, s)
     return tmp_path, sp
 
 
-# 每分组菜单固定 4 项：[采集|修改]test(1) / [采集|修改]prod(2) / 下一步(3) / 结束(4)
-# 已采集分组：1=修改test 2=修改prod；未采集分组：1=采集test 2=采集prod
+# 分组菜单：[采集|修改]test(1) / [采集|修改]prod(2) / 下一步(3) / [上一步(4)] / 结束
+# 首个分组无「上一步」→ 4 项（1..4=结束）；其余分组 5 项（1..5=结束，4=上一步）
+# 已采集分组：1=修改test 2=修改prod；未采集分组：1=采集test 2=采集prod；「下一步」恒为 3
 
 
 def test_init_walks_all_groups_next(tmp_path, monkeypatch):
@@ -93,7 +92,8 @@ def test_init_modify_test_of_group(tmp_path, monkeypatch):
 
     inputs = ["2"]  # project 下一步
     inputs.append("1")  # core 修改 test
-    inputs += ["3"] * (len(groups_in_order()) - 1)  # 其余下一步
+    inputs.append("3")  # core 采集后停留 → 选「下一步」→ 进 database
+    inputs += ["3"] * (len(groups_in_order()) - 1)  # 其余分组下一步
     inputs.append("2")  # apply 暂不
     c = FakeConsole(inputs=inputs)
     rc = init_cmd.run_init(make_args(), c)
@@ -256,3 +256,49 @@ def test_init_no_state_runs_project(tmp_path, monkeypatch):
     c = FakeConsole(inputs=[])
     rc = init_cmd.run_init(make_args(), c)
     assert rc != 0
+
+
+def test_init_back_to_previous_group(tmp_path, monkeypatch):
+    """非首个分组选「上一步」(4) → 回到上一个分组重新出菜单。"""
+    proj_dir, sp = _seed_project(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": [], "apply": False}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step",
+                        lambda console: called.__setitem__("apply", True) or 0)
+
+    # project 下一步(2)；core 下一步(3) → database「上一步」(4) → 回 core → 结束(4) → apply 暂不(2)
+    inputs = ["2", "3", "4", "4", "2"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    # 未触发任何采集，也未执行 apply
+    assert called["env"] == []
+    assert called["apply"] is False
+    assert state.load(sp)["steps"]["init"]["ended_early"] is True
+    # core 概要打印两次（首次进入 + 上一步回退后再次进入）
+    blob = "\n".join(c.stdout)
+    assert blob.count("=== 分组 core") == 2
+
+
+def test_init_back_after_collect_stay(tmp_path, monkeypatch):
+    """采集后停留菜单也支持「上一步」：database 采集后停留选上一步 → 回 core。"""
+    proj_dir, sp = _seed_empty_required(tmp_path)
+    monkeypatch.chdir(proj_dir)
+    called = {"env": []}
+    monkeypatch.setattr(init_cmd, "_run_env_step",
+                        lambda gid, profile, console: called["env"].append((gid, profile)) or 0)
+    monkeypatch.setattr(init_cmd, "_run_apply_step", lambda console: 0)
+
+    # project 下一步(2)
+    # core 采集 test(1) → 停留 core「下一步」(3) → database
+    # database 采集 test(1) → 停留 database「上一步」(4) → 回 core
+    # core 结束(4) → apply 暂不(2)
+    inputs = ["2", "1", "3", "1", "4", "4", "2"]
+    c = FakeConsole(inputs=inputs)
+    rc = init_cmd.run_init(make_args(), c)
+    assert rc == 0
+    # core 采集 test 一次；database 采集 test 一次；回退后 core 选结束
+    assert called["env"] == [("core", "test"), ("database", "test")]
+    assert state.load(sp)["steps"]["init"]["ended_early"] is True

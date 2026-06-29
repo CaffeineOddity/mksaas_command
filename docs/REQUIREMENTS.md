@@ -69,8 +69,9 @@
 `docs/steps/` 只保留两个真正的步骤文档：
 
 1. [01-全流程初始化引导](docs/steps/01-init.md)
-2. [02-执行配置需求](docs/steps/02-apply.md)
-3. [03-项目信息采集](docs/steps/03-project.md)
+2. [02-项目信息采集](docs/steps/02-project.md)
+3. [04-执行配置需求](docs/steps/04-apply.md)
+
 
 统一 JSON 示例文件：
 
@@ -98,7 +99,7 @@
 
 1. `REQUIREMENTS.md` 只负责总览、原则、索引和总流程
 2. `docs/steps/` 负责三个顶层步骤：`init`（编排）、`project`（项目采集）、`apply`（落地）
-3. `docs/env-groups/` 负责具体环境变量分组的字段定义、采集流程、分组命令、校验规则与安全要求
+3. `docs/steps/03-env-groups/` 负责具体环境变量分组的字段定义、采集流程、分组命令、校验规则与安全要求
 4. `docs/build_install_upgrade_uninstall.md` 负责构建、安装、升级与卸载的完整规则
 5. `REQUIREMENTS.md` 中的“统一状态文件”章节是状态文件结构的唯一总览来源
 6. `docs/steps/02-apply.md` 是最终执行与落地规则的唯一真相来源
@@ -107,9 +108,9 @@
 具体约束：
 
 1. `docs/steps/` 不重复维护具体变量清单，除非只是做简短索引
-2. 变量范围、采集问题、字段校验规则优先写在 `docs/env-groups/`
+2. 变量范围、采集问题、字段校验规则优先写在 `docs/steps/03-env-groups/`
 3. `.env.*` 的生成与落地策略优先写在 `docs/steps/02-apply.md`
-4. 若变量名、provider 或采集逻辑发生变化，应优先更新 `docs/env-groups/`，再检查是否需要同步更新根文档和步骤文档中的索引描述
+4. 若变量名、provider 或采集逻辑发生变化，应优先更新 `docs/steps/03-env-groups/`，再检查是否需要同步更新根文档和步骤文档中的索引描述
 
 ## 5. 统一状态文件
 
@@ -156,11 +157,11 @@
 1. 每个 env 分组有唯一的规范标识符（`id`），采用下划线小写形式，例如 `github_oauth`、`cron_jobs`、`better_auth`
 2. `id` 即为状态文件 `profiles.<profile>.env_groups` 下的 group key，以及 `steps.init.env_groups_processed/skipped` 列表中的元素
 3. CLI 命令中的 group 参数使用连字符形式（`github-oauth`、`cron-jobs`、`better-auth`），CLI 内部负责连字符 ↔ 下划线的双向映射
-4. `docs/env-groups/` 文件名采用 `<序号>-<连字符形式>.md`，序号仅用于文档排序，不参与运行时映射
-5. CLI 与 apply 遍历分组的顺序固定为 `01~17` 的文档序号顺序，与 group key 的字母序无关
+4. `docs/steps/03-env-groups/` 文件名采用 `<序号>-<连字符形式>.md`，序号仅用于文档排序，不参与运行时映射
+5. CLI 与 apply 遍历分组的顺序固定为 `01~18` 的文档序号顺序，与 group key 的字母序无关
 6. 状态文件中只允许出现规范 group key，禁止混用连字符形式
 
-完整映射表见 `docs/env-groups/` 各文档与 §5.1 的分组清单。
+完整映射表见 `docs/steps/03-env-groups/` 各文档与 §5.1 的分组清单。
 
 ### 5.2.1 变量全集 schema
 
@@ -168,7 +169,7 @@
 
 1. schema 文件以 group 为单位组织，每个 group 列出其全部变量、`required`、默认值、`generate_if_empty`、脱敏类型
 2. CLI 在运行时加载该 schema；env 命令采集的字段、apply 重建 `.env.*` 的变量全集，均以该 schema 为准
-3. env-group 文档（`docs/env-groups/*.md`）描述采集流程与校验规则，变量清单以 schema 为准；两者冲突时以 schema 为准
+3. env-group 文档（`docs/steps/03-env-groups/*.md`）描述采集流程与校验规则，变量清单以 schema 为准；两者冲突时以 schema 为准
 4. apply 全量重建 `.env.test` / `.env.prod` 时，按 schema 遍历全部变量：已采集的取状态文件值，未采集或跳过的取 schema 默认值（无默认值且非必填则写空串，必填且缺失则在 §10 校验阶段拦截）
 5. schema 变更时同步更新 env-group 文档，避免两处分叉
 
@@ -188,23 +189,24 @@
 
 状态文件与最终环境生成步骤，需要覆盖 MkSaaS 环境模板中的主要变量分组：
 
-1. [Core](docs/env-groups/01-core.md)
-2. [Database](docs/env-groups/02-database.md)
-3. [Better Auth](docs/env-groups/03-better-auth.md)
-4. [GitHub OAuth](docs/env-groups/04-github-oauth.md)
-5. [Google OAuth](docs/env-groups/05-google-oauth.md)
-6. [Email / Newsletter](docs/env-groups/06-email-newsletter.md)
-7. [Storage](docs/env-groups/07-storage.md)
-8. [Payment](docs/env-groups/08-payment.md)
-9. [Configurations](docs/env-groups/09-configurations.md)
-10. [Analytics](docs/env-groups/10-analytics.md)
-11. [Notification](docs/env-groups/11-notification.md)
-12. [Affiliate](docs/env-groups/12-affiliate.md)
-13. [Captcha](docs/env-groups/13-captcha.md)
-14. [Crisp](docs/env-groups/14-crisp.md)
-15. [Cron Jobs](docs/env-groups/15-cron-jobs.md)
-16. [AI](docs/env-groups/16-ai.md)
-17. [Firecrawl](docs/env-groups/17-firecrawl.md)
+1. [Core](docs/steps/03-env-groups/01-core.md)
+2. [Database](docs/steps/03-env-groups/02-database.md)
+3. [Better Auth](docs/steps/03-env-groups/03-better-auth.md)
+4. [GitHub OAuth](docs/steps/03-env-groups/04-github-oauth.md)
+5. [Google OAuth](docs/steps/03-env-groups/05-google-oauth.md)
+6. [Email](docs/steps/03-env-groups/06-email.md)
+7. [Newsletter](docs/steps/03-env-groups/07-newsletter.md)
+8. [Storage](docs/steps/03-env-groups/08-storage.md)
+9. [Payment](docs/steps/03-env-groups/09-payment.md)
+10. [Configurations](docs/steps/03-env-groups/10-configurations.md)
+11. [Analytics](docs/steps/03-env-groups/11-analytics.md)
+12. [Notification](docs/steps/03-env-groups/12-notification.md)
+13. [Affiliate](docs/steps/03-env-groups/13-affiliate.md)
+14. [Captcha](docs/steps/03-env-groups/14-captcha.md)
+15. [Crisp](docs/steps/03-env-groups/15-crisp.md)
+16. [Cron Jobs](docs/steps/03-env-groups/16-cron-jobs.md)
+17. [AI](docs/steps/03-env-groups/17-ai.md)
+18. [Firecrawl](docs/steps/03-env-groups/18-firecrawl.md)
 
 要求：
 
@@ -221,18 +223,19 @@
 3. `mksaas env better-auth [--profile test|prod]`
 4. `mksaas env github-oauth [--profile test|prod]`
 5. `mksaas env google-oauth [--profile test|prod]`
-6. `mksaas env email-newsletter [--profile test|prod]`
-7. `mksaas env storage [--profile test|prod]`
-8. `mksaas env payment [--profile test|prod]`
-9. `mksaas env configurations [--profile test|prod]`
-10. `mksaas env analytics [--profile test|prod]`
-11. `mksaas env notification [--profile test|prod]`
-12. `mksaas env affiliate [--profile test|prod]`
-13. `mksaas env captcha [--profile test|prod]`
-14. `mksaas env crisp [--profile test|prod]`
-15. `mksaas env cron-jobs [--profile test|prod]`
-16. `mksaas env ai [--profile test|prod]`
-17. `mksaas env firecrawl [--profile test|prod]`
+6. `mksaas env email [--profile test|prod]`
+7. `mksaas env newsletter [--profile test|prod]`
+8. `mksaas env storage [--profile test|prod]`
+9. `mksaas env payment [--profile test|prod]`
+10. `mksaas env configurations [--profile test|prod]`
+11. `mksaas env analytics [--profile test|prod]`
+12. `mksaas env notification [--profile test|prod]`
+13. `mksaas env affiliate [--profile test|prod]`
+14. `mksaas env captcha [--profile test|prod]`
+15. `mksaas env crisp [--profile test|prod]`
+16. `mksaas env cron-jobs [--profile test|prod]`
+17. `mksaas env ai [--profile test|prod]`
+18. `mksaas env firecrawl [--profile test|prod]`
 
 `--profile` 规则：
 
@@ -258,21 +261,21 @@ flowchart TD
     I --> J[校验 env_groups 必填项]
     J --> K[全量重建 .mksaas/.env.test / .mksaas/.env.prod]
     K --> L[询问 .env 同步 test 还是 prod，复制到项目根 .env]
-    L --> M{should_push}
-    M -->|是| N[push 到远程]
-    M -->|否| O[跳过 push]
-    N --> P[生成 SETUP_NEXT_STEPS.md]
-    O --> P
+    L --> M[尝试 push 到远程]
+    M --> MP{push 是否成功}
+    MP -->|是| P[生成 SETUP_NEXT_STEPS.md]
+    MP -->|否| MQ[提示手动处理 push,不阻断]
+    MQ --> P
 ```
 
-逐步流程（不走 init）同样可达：任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，`project` 可选，无需采集全部分组。
+逐步流程（不走 init）同样可达：`project` 必需（apply 硬前置），任意单个或多个 `mksaas env <group>` 即可 `mksaas apply`，无需采集全部分组。
 
 逐步模式的前置约束：
 
 1. 逐步模式下，`mksaas env <group>` 与 `mksaas apply` 启动时必须先定位到 `.mksaas/setup-state.json`
 2. 该状态文件只能由 `mksaas project` 创建；因此逐步模式要求用户**当前工作目录已是 `mksaas project` 就位过的项目目录**（即当前目录或其直接子层存在 `.mksaas/setup-state.json`）
 3. 若状态文件不存在，逐步命令应明确提示用户先执行 `mksaas project` 完成项目就位，不得自行创建 `.mksaas/` 或状态文件
-4. 当未采集 `project` 时，apply 跳过 push，仅生成 `.env.*`，要求当前目录已是有效项目；apply 只校验环境必填项
+4. apply 启动即要求 `project` 信息已存在（含 `project_dir` 与 `repo_url`），缺失则终止并提示先执行 `mksaas project`；apply 完成环境落地后一律尝试 push，push 失败不阻断，提示用户手动处理
 
 ## 7. 初始化时序图
 
@@ -301,8 +304,9 @@ sequenceDiagram
     C->>S: 调用 apply
     S->>J: 读取完整状态
     S->>F: 全量重建 .mksaas/.env.* 并复制项目根 .env
-    opt should_push
-        S->>G: push 到远程
+    S->>G: 尝试 push 到远程
+    alt push 失败
+        S->>U: 提示手动处理 push，不阻断
     end
     S->>J: 回写已应用状态
     C-->>U: 输出最终结果
@@ -381,7 +385,7 @@ tourismchina/                  ← 本地项目目录 = git 仓库根目录
 3. 用户可以通过 `mksaas env <group>` 单独执行任一环境分组命令（逐步模式下要求当前目录已是 `project` 就位过的项目目录）
 4. 每个命令执行后都会更新 `.mksaas/setup-state.json`
 5. 每个命令再次执行时都会先展示已有 JSON 信息并询问是否修改
-6. `mksaas apply` 启动时必须保证 `project` 信息已存在，否则终止并提示先执行 `mksaas project`；其后根据 JSON 完成 `.env.test`/`.env.prod`/`.env` 落地，并在 `should_push` 为真时 push（clone 与模板初始化由 `mksaas project` 完成）
+6. `mksaas apply` 启动时必须保证 `project` 信息已存在，否则终止并提示先执行 `mksaas project`；其后根据 JSON 完成 `.env.test`/`.env.prod`/`.env` 落地，并一律尝试 push（clone 与模板初始化由 `mksaas project` 完成，push 失败不阻断，提示用户手动处理）
 7. 密钥、连接串、token 等内容不会被直接打印到终端
 8. macOS 下可通过 `install.sh` 安装为 `mksaas` 命令，可通过 `mksaas upgrade --local` 升级，可通过 `mksaas uninstall` 卸载
 9. 不再依赖 shell 脚本作为运行入口（`install.sh` / `build.sh` 仅用于安装与构建，不是 CLI 的运行入口）

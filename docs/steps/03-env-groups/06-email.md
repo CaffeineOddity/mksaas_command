@@ -1,8 +1,8 @@
-# Storage 环境分组需求
+# Email 环境分组需求
 
 ## 1. 目标
 
-本分组定义 `Storage` 相关环境变量的采集、确认、回写与最终落地规则。
+本分组定义事务邮件（Transactional Email）相关环境变量的采集、确认、回写与最终落地规则。仅负责发信能力（Resend）；订阅与 Newsletter 见 [07-newsletter.md](07-newsletter.md)。
 
 ## 2. 参考说明
 
@@ -20,7 +20,7 @@
 ## 3. 独立命令
 
 ```bash
-mksaas env storage [--profile test|prod]
+mksaas env email [--profile test|prod]
 ```
 
 要求：
@@ -32,12 +32,7 @@ mksaas env storage [--profile test|prod]
 
 ## 4. 变量范围
 
-1. `STORAGE_REGION`
-2. `STORAGE_BUCKET_NAME`
-3. `STORAGE_ACCESS_KEY_ID`
-4. `STORAGE_SECRET_ACCESS_KEY`
-5. `STORAGE_ENDPOINT`
-6. `STORAGE_PUBLIC_URL`
+1. `RESEND_API_KEY`
 
 ## 5. 采集流程说明
 
@@ -47,7 +42,7 @@ mksaas env storage [--profile test|prod]
 2. 按“已存在值 / 未配置值 / 自动生成值”三类展示当前状态
 3. 告知用户本分组对应的变量用途，并提示是否需要先去官方文档或第三方平台创建配置
 4. 用户选择沿用已有值，或进入修改流程逐项填写
-5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
+5. 对输入值做基础校验，例如密钥是否为空
 6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
 7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
 8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
@@ -56,10 +51,10 @@ mksaas env storage [--profile test|prod]
 
 ```mermaid
 flowchart TD
-    A[执行 mksaas env storage] --> B[读取 setup-state.json]
-    B --> C{是否已有 Storage 配置}
+    A[执行 mksaas env email] --> B[读取 setup-state.json]
+    B --> C{是否已有 Email 配置}
     C -->|是| D[展示已有值与变量用途]
-    C -->|否| E[进入 Storage 采集流程]
+    C -->|否| E[进入 Email 采集流程]
     D --> F{是否修改}
     F -->|否| G[沿用已有配置]
     F -->|是| E
@@ -77,36 +72,35 @@ sequenceDiagram
     participant U as 用户
     participant C as CLI
     participant J as setup-state.json
-    participant D as 官方文档/第三方平台
+    participant D as Resend 官网
 
-    U->>C: mksaas env storage
-    C->>J: 读取 storage 分组配置
+    U->>C: mksaas env email
+    C->>J: 读取 email 分组配置
     J-->>C: 返回已有值或空结果
     C->>U: 展示已有值、变量用途与缺失项
     U->>C: 选择沿用或修改
     alt 需要补充配置
-        C->>U: 提示前往官方文档或平台创建配置
-        U->>D: 获取所需参数
+        C->>U: 提示前往 Resend 创建 API Key
+        U->>D: 获取 RESEND_API_KEY
         U->>C: 回填字段值
     end
     C->>C: 校验字段格式与必填项
-    C->>J: 回写 storage 分组配置
+    C->>J: 回写 email 分组配置
     C-->>U: 提示需在 apply 阶段统一落地并可用 pnpm run dev 验证
 ```
 
 ## 8. 采集要求
 
-1. 支持 Cloudflare R2 与 S3 兼容服务
-2. 若已有配置，先展示各字段已配置状态
-3. 提示用户先完成 bucket 创建、endpoint 获取与访问密钥创建
+1. 若已有配置，先展示 `RESEND_API_KEY` 已配置状态并询问是否修改
+2. 提示用户先到 Resend 官网生成 API Key
+3. 可单独跳过本分组（仅影响发信能力，不影响订阅）
 
 ## 9. 生成要求
 
-1. 全部字段统一写入 `.env.*`
-2. 应校验 endpoint 与 public URL 格式
+1. `RESEND_API_KEY` 统一写入 `.env.*`
+2. 未配置时可跳过输出（写空串）
 
 ## 10. 安全要求
 
-1. 不得在日志中输出完整密钥
-2. 采集时对访问密钥使用隐藏输入
-
+1. 不得在终端明文展示 API Key
+2. 终端输出以已配置状态展示

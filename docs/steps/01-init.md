@@ -34,21 +34,21 @@ mksaas init
 2. `mksaas env <group> [--profile test|prod]`：逐个采集环境分组，每个分组都可确认或跳过
 3. `mksaas apply`：统一执行落地，apply 前停一次确认
 
-被编排的 env 分组顺序与 `docs/env-groups/01~17` 一致，用户可跳过任意分组。
+被编排的 env 分组顺序与 `docs/steps/03-env-groups/01~18` 一致，用户可跳过任意分组。
 
 ## 4. 两种使用方式
 
 1. 完整流程：`mksaas init`，由编排器引导 `project → env×N → apply`
-2. 逐步流程：用户也可不走 `init`，直接单步执行 `mksaas env <group>`、`mksaas apply`，`project` 可选
+2. 逐步流程：用户也可不走 `init`，先执行 `mksaas project` 就位项目目录，再单步执行 `mksaas env <group>`、`mksaas apply`
 
-逐步模式下，任意单个或多个 `env <group>` 即可搭配 `apply`，`project` 可选，无需采集全部分组，也无需走完整 `init`。
+逐步模式下，`project` 必需（apply 的硬前置），任意单个或多个 `env <group>` 即可搭配 `apply`，无需采集全部分组，也无需走完整 `init`。
 
 逐步模式前置约束：
 
 1. `mksaas env <group>` 与 `mksaas apply` 启动时必须能定位到 `.mksaas/setup-state.json`
 2. 该状态文件只能由 `mksaas project` 创建，因此逐步模式要求当前目录已是 `mksaas project` 就位过的项目目录
 3. 状态文件不存在时，逐步命令提示用户先执行 `mksaas project`，不得自行创建
-4. `mksaas apply` 启动时必须保证 `project` 信息已存在于 JSON，缺失则终止并提示先执行 `mksaas project`；apply 是否 push 取决于 `should_push`
+4. `mksaas apply` 启动时必须保证 `project` 信息已存在于 JSON，缺失则终止并提示先执行 `mksaas project`；apply 完成环境落地后一律尝试 push，不依赖预标记
 
 两种方式共享同一个 `.mksaas/setup-state.json`，状态互通。
 
@@ -68,6 +68,8 @@ flowchart TD
     I -->|否| K[跳过该分组]
     J --> G
     K --> G
+    G -->|上一步| Gprev[回到上一个 env 分组]
+    Gprev --> G
     H -->|否| L[到达 apply 前确认]
     L --> M{是否立即执行 apply}
     M -->|否| N[结束并提示可稍后单独执行 mksaas apply]
@@ -118,8 +120,9 @@ sequenceDiagram
 1. 每进入一个被编排步骤前，先展示该步骤在 JSON 中的已有状态
 2. `project` 为必填步骤，不可跳过；若用户拒绝，则终止本次编排
 3. 每个 `env` 分组都可选择处理或跳过，跳过不影响后续分组
-4. 到达 `apply` 前，单独停一次确认，apply 摘要中不得展示完整密钥、连接串、token
-5. 用户选择暂不执行 apply 时，编排正常结束并提示可稍后单独执行 `mksaas apply`
+4. env 分组菜单可选「上一步」回到上一个 env 分组重新展示并出菜单（首个分组除外）；采集后停留本分组再次出的菜单同样支持「上一步」
+5. 到达 `apply` 前，单独停一次确认，apply 摘要中不得展示完整密钥、连接串、token
+6. 用户选择暂不执行 apply 时，编排正常结束并提示可稍后单独执行 `mksaas apply`
 
 ## 8. 编排进度记录
 

@@ -43,6 +43,26 @@ def remotes(d: Path) -> dict:
     return result
 
 
+def has_remote(d: Path, repo_url: str) -> bool:
+    """d 的任一 remote url 是否含 repo_url（同一仓库判据）。
+
+    不匹配即视为不同仓库，绝不覆盖。
+    """
+    return repo_url in remotes(d).values()
+
+
+def has_commits(d: Path) -> bool:
+    """d 是否有提交内容（空仓返回 False）。
+
+    用于区分「已存关联模版仓库（有内容）」与「空仓库」。
+    """
+    res = subprocess.run(
+        ["git", "-C", str(d), "rev-list", "-n1", "--all"],
+        capture_output=True, text=True, check=False,
+    )
+    return bool(res.stdout.strip())
+
+
 def clone(url: str, dst: Path, origin: str | None = None) -> bool:
     """克隆 url 到 dst；origin 指定远程名（默认 origin）。返回是否成功。
 

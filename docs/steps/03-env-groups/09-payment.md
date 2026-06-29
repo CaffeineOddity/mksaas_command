@@ -41,6 +41,12 @@ mksaas env payment [--profile test|prod]
 7. `NEXT_PUBLIC_STRIPE_PRICE_CREDITS_STANDARD`
 8. `NEXT_PUBLIC_STRIPE_PRICE_CREDITS_PREMIUM`
 9. `NEXT_PUBLIC_STRIPE_PRICE_CREDITS_ENTERPRISE`
+10. `VITE_PAYMENT_PROVIDER`（支付提供商开关：`stripe` / `creem`，按所选提供商自动写入）
+11. `CREEM_API_KEY`
+12. `CREEM_WEBHOOK_SECRET`
+13. `VITE_CREEM_PRODUCT_PRO_MONTHLY`
+14. `VITE_CREEM_PRODUCT_PRO_YEARLY`
+15. `VITE_CREEM_PRODUCT_LIFETIME`
 
 ## 5. 采集流程说明
 
@@ -48,12 +54,14 @@ mksaas env payment [--profile test|prod]
 
 1. 读取 `.mksaas/setup-state.json` 中当前分组和当前 profile 的已有配置
 2. 按“已存在值 / 未配置值 / 自动生成值”三类展示当前状态
-3. 告知用户本分组对应的变量用途，并提示是否需要先去官方文档或第三方平台创建配置
-4. 用户选择沿用已有值，或进入修改流程逐项填写
-5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
-6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
-7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
-8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
+3. 选择支付提供商：Stripe 或 Creem（或「跳过/手动输入」采集全部变量）
+4. 选定后自动打开对应控制台（Stripe → `https://dashboard.stripe.com/`，Creem → `https://creem.io/`），并按顺序打印创建步骤：创建账户 → 获取 API 密钥 → 设置 Webhook（URL 形如 `<base_url>/api/webhooks/{stripe|creem}`，需先采集 core 的 NEXT_PUBLIC_BASE_URL）→ 创建产品与价格计划
+5. 仅采集所选提供商相关变量（Stripe 9 个 / Creem 5 个）；`VITE_PAYMENT_PROVIDER` 按选择自动写入（`stripe` / `creem`），无需手动填写
+6. 用户选择沿用已有值，或进入修改流程逐项填写（每行留空=保留）
+7. 对输入值做基础校验，例如密钥是否为空
+8. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
+9. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
+10. apply 完成后，支持通过 `pnpm run dev` 做环境验证
 
 ## 6. 流程图
 
@@ -99,9 +107,9 @@ sequenceDiagram
 
 ## 8. 采集要求
 
-1. 支持 Stripe 与 Creem provider 抽象配置
+1. 支持 Stripe 与 Creem 两种支付提供商，二者互斥，由 `VITE_PAYMENT_PROVIDER` 开关切换
 2. 若已有值，先展示价格 ID 摘要和 secret 已配置状态
-3. 提示用户先在支付平台创建产品、价格和 webhook
+3. 采集时先选择提供商，按选择自动打开对应控制台并引导创建账户、API 密钥、Webhook、产品与价格计划；`VITE_PAYMENT_PROVIDER` 随选择自动写入，无需手动填
 
 ## 9. 生成要求
 

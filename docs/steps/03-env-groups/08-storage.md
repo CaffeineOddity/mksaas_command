@@ -1,8 +1,8 @@
-# Google OAuth 环境分组需求
+# Storage 环境分组需求
 
 ## 1. 目标
 
-本分组定义 `Google OAuth` 相关环境变量的采集、确认、回写与最终落地规则。
+本分组定义 `Storage` 相关环境变量的采集、确认、回写与最终落地规则。
 
 ## 2. 参考说明
 
@@ -20,7 +20,7 @@
 ## 3. 独立命令
 
 ```bash
-mksaas env google-oauth [--profile test|prod]
+mksaas env storage [--profile test|prod]
 ```
 
 要求：
@@ -32,8 +32,12 @@ mksaas env google-oauth [--profile test|prod]
 
 ## 4. 变量范围
 
-1. `GOOGLE_CLIENT_ID`
-2. `GOOGLE_CLIENT_SECRET`
+1. `STORAGE_REGION`
+2. `STORAGE_BUCKET_NAME`
+3. `STORAGE_ACCESS_KEY_ID`
+4. `STORAGE_SECRET_ACCESS_KEY`
+5. `STORAGE_ENDPOINT`
+6. `STORAGE_PUBLIC_URL`
 
 ## 5. 采集流程说明
 
@@ -42,20 +46,21 @@ mksaas env google-oauth [--profile test|prod]
 1. 读取 `.mksaas/setup-state.json` 中当前分组和当前 profile 的已有配置
 2. 按“已存在值 / 未配置值 / 自动生成值”三类展示当前状态
 3. 告知用户本分组对应的变量用途，并提示是否需要先去官方文档或第三方平台创建配置
-4. 用户选择沿用已有值，或进入修改流程逐项填写
-5. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
-6. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
-7. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
-8. apply 完成后，支持通过 `pnpm run dev` 做环境验证
+4. 采集时自动打开 Cloudflare R2 dashboard（`https://dash.cloudflare.com/?to=/:account/r2`），并按顺序打印 R2 存储桶创建步骤：注册/登录 Cloudflare → 创建存储桶 → 启用 Public Development URL（保存为 STORAGE_PUBLIC_URL）→（推荐）配置自定义域名 → 创建 API Token（权限 Object Read & Write，获取 Access Key ID 与 Secret Access Key）
+5. 用户选择沿用已有值，或进入修改流程逐项填写
+6. 对输入值做基础校验，例如 URL、布尔值、价格 ID、站点 ID、密钥是否为空
+7. 将结果回写到 `.mksaas/setup-state.json`，并标记当前分组已采集但尚未 apply
+8. 在最后一步 `mksaas apply` 中，将本分组内容合并进 `.env.*`
+9. apply 完成后，支持通过 `pnpm run dev` 做环境验证
 
 ## 6. 流程图
 
 ```mermaid
 flowchart TD
-    A[执行 mksaas env google-oauth] --> B[读取 setup-state.json]
-    B --> C{是否已有 Google OAuth 配置}
+    A[执行 mksaas env storage] --> B[读取 setup-state.json]
+    B --> C{是否已有 Storage 配置}
     C -->|是| D[展示已有值与变量用途]
-    C -->|否| E[进入 Google OAuth 采集流程]
+    C -->|否| E[进入 Storage 采集流程]
     D --> F{是否修改}
     F -->|否| G[沿用已有配置]
     F -->|是| E
@@ -75,8 +80,8 @@ sequenceDiagram
     participant J as setup-state.json
     participant D as 官方文档/第三方平台
 
-    U->>C: mksaas env google-oauth
-    C->>J: 读取 google-oauth 分组配置
+    U->>C: mksaas env storage
+    C->>J: 读取 storage 分组配置
     J-->>C: 返回已有值或空结果
     C->>U: 展示已有值、变量用途与缺失项
     U->>C: 选择沿用或修改
@@ -86,23 +91,23 @@ sequenceDiagram
         U->>C: 回填字段值
     end
     C->>C: 校验字段格式与必填项
-    C->>J: 回写 google-oauth 分组配置
+    C->>J: 回写 storage 分组配置
     C-->>U: 提示需在 apply 阶段统一落地并可用 pnpm run dev 验证
 ```
 
 ## 8. 采集要求
 
-1. 支持启用或禁用 Google OAuth
-2. 若已有配置，先展示摘要并确认是否修改
-3. 提示用户先到 Google Cloud Console 创建凭据
+1. 支持 Cloudflare R2 与 S3 兼容服务
+2. 若已有配置，先展示各字段已配置状态
+3. 采集时自动打开 Cloudflare R2 dashboard，并引导用户依次完成 bucket 创建、Public Development URL 启用（含自定义域名）、API Token 创建（Object Read & Write），拿到 Access Key ID / Secret Access Key 后回填
 
 ## 9. 生成要求
 
-1. `GOOGLE_CLIENT_ID` 与 `GOOGLE_CLIENT_SECRET` 统一写入 `.env.*`
-2. 未启用时可跳过输出
+1. 全部字段统一写入 `.env.*`
+2. 应校验 endpoint 与 public URL 格式
 
 ## 10. 安全要求
 
-1. 不得输出完整 secret
-2. 终端输出以摘要形式展示
+1. 不得在日志中输出完整密钥
+2. 采集时对访问密钥使用隐藏输入
 

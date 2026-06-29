@@ -13,7 +13,7 @@ def test_groups_in_order_fixed():
     ids = groups_in_order()
     assert ids == [
         "core", "database", "better_auth", "github_oauth", "google_oauth",
-        "email_newsletter", "storage", "payment", "configurations", "analytics",
+        "email", "newsletter", "storage", "payment", "configurations", "analytics",
         "notification", "affiliate", "captcha", "crisp", "cron_jobs", "ai",
         "firecrawl",
     ]

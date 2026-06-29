@@ -79,7 +79,11 @@ def run_init(args: Any, console: Console) -> int:
     data = state.load(sp)
 
     # ── 逐个 env 分组：全部重走，不再按 processed/skipped 跳过 ──
-    for gid in groups.groups_in_order():
+    # 用索引游走而非 for 循环，以支持「上一步」回退到上一个分组。
+    order = groups.groups_in_order()
+    idx = 0
+    while 0 <= idx < len(order):
+        gid = order[idx]
         kebab = groups.group_snake_to_kebab(gid)
         _print_group_overview(console, data, gid)
         collected_test = _group_collected(data, gid, "test")
@@ -96,10 +100,15 @@ def run_init(args: Any, console: Console) -> int:
         else:
             options.append("采集 prod")
         options.append("下一步")
+        # 非首个分组提供「上一步」回退到上一个 env 分组（首个分组无）
+        if idx > 0:
+            options.append("上一步")
         options.append("结束")
 
-        choice = console.choose("", options, default=len(options) - 1)  # 默认「下一步」
-        # 前两项是 test/prod 动作，后两项是 下一步/结束
+        # default 指向「下一步」（恒为第 3 项）
+        choice = console.choose("", options, default=3)
+        chosen = options[choice - 1]
+        # 前两项是 test/prod 动作；其余按 label 语义判定（避免「上一步」位置漂移）
         if choice <= 2:
             profile = "test" if choice == 1 else "prod"
             _run_env_step(gid, profile, console)
@@ -108,9 +117,13 @@ def run_init(args: Any, console: Console) -> int:
             state.save(sp, data)
             # 采集后继续停留在该分组（重新展示并出菜单），让用户接着改另一个 profile
             continue
-        elif choice == len(options) - 1:  # 下一步
+        elif chosen == "上一步":
+            idx -= 1
+            continue
+        elif chosen == "下一步":
             data["steps"]["init"]["updated_at"] = _now()
             state.save(sp, data)
+            idx += 1
             continue
         else:  # 结束
             data["steps"]["init"]["ended_early"] = True
@@ -142,7 +155,8 @@ def _project_step(console: Console, sp):
         console.header("project")
         console.print(f"  仓库地址：{proj['repo_url']}")
         console.print(f"  项目目录：{proj.get('project_dir')}")
-        console.print(f"  应用策略：{proj.get('apply_strategy')}  should_push={proj.get('should_push')}")
+        if proj.get("template_repo"):
+            console.print(f"  模板仓库：{proj.get('template_repo')}@{proj.get('template_branch')}")
         choice = console.choose("", ["修改 repo url", "下一步", "结束"], default=2)
         if choice == 1:  # 修改 repo url：直接输入新地址，不走 clone/来源采集
             new_url = _edit_repo_url(console, proj["repo_url"])
