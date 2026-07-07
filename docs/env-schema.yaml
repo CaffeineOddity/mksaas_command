@@ -13,7 +13,7 @@
 #
 # group 标识符规范见 REQUIREMENTS.md §5.2：
 #   - group key 使用下划线形式（如 github_oauth），与 CLI 命令的连字符形式（github-oauth）一一映射
-#   - 遍历顺序固定为下方 01~18 的顺序
+#   - 遍历顺序固定为下方分组定义顺序
 
 groups:
   - id: core
@@ -237,22 +237,6 @@ groups:
         generate_if_empty: false
         sensitive: false
         description: Creem lifetime product ID
-
-  - id: configurations
-    order: 10
-    variables:
-      - name: DISABLE_IMAGE_OPTIMIZATION
-        required: false
-        default: "false"
-        generate_if_empty: false
-        sensitive: false
-        description: Disable image optimization
-      - name: NEXT_PUBLIC_DEMO_WEBSITE
-        required: false
-        default: "false"
-        generate_if_empty: false
-        sensitive: false
-        description: Run as demo website
 
   - id: analytics
     order: 11

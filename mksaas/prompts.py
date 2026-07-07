@@ -2,7 +2,8 @@
 
 docs/env-groups/*.md §5 为采集流程模板；REQUIREMENTS §3.3 为交互确认顺序。
 依赖 Console 缝与 schema。collect_group：采集指定 profile，每行变量预填当前值/
-schema 默认值，留空=保留。敏感字段走 getpass。database 分组走提供商选择引导。
+schema 默认值，留空=保留。敏感字段走 getpass。database / payment / analytics
+分组走 provider 选择引导。
 """
 
 from __future__ import annotations
@@ -75,6 +76,193 @@ _PAYMENT_PROVIDERS = {
             "Products 创建「Pro Plan」月度产品（recurring / every-month）→ VITE_CREEM_PRODUCT_PRO_MONTHLY",
             "创建年度产品（recurring / every-year）→ VITE_CREEM_PRODUCT_PRO_YEARLY",
             "创建「Lifetime Plan」一次性产品（one_time）→ VITE_CREEM_PRODUCT_LIFETIME",
+        ],
+    },
+}
+
+# analytics 提供商：名称 → 官网 / 该提供商需采集的变量 / 创建步骤。
+# 选定后仅采集该 provider 变量；重新选择 provider 时会清空旧 provider 字段。
+_ANALYTICS_PROVIDERS = {
+    "Google Analytics": {
+        "url": "https://analytics.google.com/",
+        "vars": ["NEXT_PUBLIC_GOOGLE_ANALYTICS_ID"],
+        "guide": [
+            "在 analytics.google.com 创建 Google Analytics 账号或属性",
+            "进入 Admin -> Data Streams，复制 Measurement ID（形如 G-XXXXXXX）",
+            "回填到 NEXT_PUBLIC_GOOGLE_ANALYTICS_ID",
+        ],
+    },
+    "Umami": {
+        "url": "https://cloud.umami.is/",
+        "vars": ["NEXT_PUBLIC_UMAMI_WEBSITE_ID", "NEXT_PUBLIC_UMAMI_SCRIPT"],
+        "guide": [
+            "在 cloud.umami.is 创建网站",
+            "复制 Website ID 到 NEXT_PUBLIC_UMAMI_WEBSITE_ID",
+            "若使用自托管或自定义脚本地址，再填写 NEXT_PUBLIC_UMAMI_SCRIPT；留空可使用默认值",
+        ],
+    },
+    "OpenPanel": {
+        "url": "https://openpanel.dev/",
+        "vars": ["NEXT_PUBLIC_OPENPANEL_CLIENT_ID"],
+        "guide": [
+            "在 OpenPanel 创建项目",
+            "复制 client ID 到 NEXT_PUBLIC_OPENPANEL_CLIENT_ID",
+        ],
+    },
+    "Plausible": {
+        "url": "https://plausible.io/",
+        "vars": ["NEXT_PUBLIC_PLAUSIBLE_DOMAIN", "NEXT_PUBLIC_PLAUSIBLE_SCRIPT"],
+        "guide": [
+            "在 Plausible 创建站点",
+            "把站点域名填到 NEXT_PUBLIC_PLAUSIBLE_DOMAIN",
+            "若使用自托管或自定义脚本地址，再填写 NEXT_PUBLIC_PLAUSIBLE_SCRIPT；留空可使用默认值",
+        ],
+    },
+    "Ahrefs": {
+        "url": "https://ahrefs.com/web-analytics",
+        "vars": ["NEXT_PUBLIC_AHREFS_WEBSITE_ID"],
+        "guide": [
+            "在 Ahrefs Web Analytics 创建站点",
+            "复制 website ID 到 NEXT_PUBLIC_AHREFS_WEBSITE_ID",
+        ],
+    },
+    "Seline": {
+        "url": "https://seline.so/",
+        "vars": ["NEXT_PUBLIC_SELINE_TOKEN"],
+        "guide": [
+            "在 Seline 创建项目",
+            "复制 token 到 NEXT_PUBLIC_SELINE_TOKEN",
+        ],
+    },
+    "DataFast": {
+        "url": "https://datafa.st/",
+        "vars": ["NEXT_PUBLIC_DATAFAST_WEBSITE_ID", "NEXT_PUBLIC_DATAFAST_DOMAIN"],
+        "guide": [
+            "在 DataFast 创建站点",
+            "复制 Website ID 到 NEXT_PUBLIC_DATAFAST_WEBSITE_ID",
+            "把统计域名填到 NEXT_PUBLIC_DATAFAST_DOMAIN",
+        ],
+    },
+    "PostHog": {
+        "url": "https://us.posthog.com/",
+        "vars": ["NEXT_PUBLIC_POSTHOG_KEY", "NEXT_PUBLIC_POSTHOG_HOST"],
+        "guide": [
+            "在 PostHog 创建项目",
+            "复制 Project API Key 到 NEXT_PUBLIC_POSTHOG_KEY",
+            "复制实例 Host 到 NEXT_PUBLIC_POSTHOG_HOST，例如 https://us.i.posthog.com",
+        ],
+    },
+    "Clarity": {
+        "url": "https://clarity.microsoft.com/",
+        "vars": ["NEXT_PUBLIC_CLARITY_PROJECT_ID"],
+        "guide": [
+            "在 Microsoft Clarity 创建项目",
+            "复制 Project ID 到 NEXT_PUBLIC_CLARITY_PROJECT_ID",
+        ],
+    },
+}
+
+_NOTIFICATION_PROVIDERS = {
+    "Discord": {
+        "url": "https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks",
+        "vars": ["DISCORD_WEBHOOK_URL"],
+        "guide": [
+            "在 Discord 服务器频道设置中创建 Webhook",
+            "复制 Webhook URL 后回填到 DISCORD_WEBHOOK_URL",
+        ],
+    },
+    "Feishu": {
+        "url": "https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot",
+        "vars": ["FEISHU_WEBHOOK_URL"],
+        "guide": [
+            "在飞书群里创建自定义机器人",
+            "复制 Webhook URL 后回填到 FEISHU_WEBHOOK_URL",
+        ],
+    },
+}
+
+_AFFILIATE_PROVIDERS = {
+    "Affonso": {
+        "url": "https://affonso.io/",
+        "vars": ["NEXT_PUBLIC_AFFILIATE_AFFONSO_ID"],
+        "guide": [
+            "在 Affonso 创建项目或站点",
+            "复制公开 ID 后回填到 NEXT_PUBLIC_AFFILIATE_AFFONSO_ID",
+        ],
+    },
+    "PromoteKit": {
+        "url": "https://promotekit.com/",
+        "vars": ["NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID"],
+        "guide": [
+            "在 PromoteKit 创建项目",
+            "复制公开 ID 后回填到 NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID",
+        ],
+    },
+}
+
+_AI_PROVIDERS = {
+    "AI Gateway": {
+        "url": "https://vercel.com/docs/ai-gateway",
+        "vars": ["AI_GATEWAY_API_KEY"],
+        "guide": [
+            "在 AI Gateway 平台获取 API Key",
+            "复制后回填到 AI_GATEWAY_API_KEY",
+        ],
+    },
+    "FAL": {
+        "url": "https://fal.ai/",
+        "vars": ["FAL_API_KEY"],
+        "guide": [
+            "在 fal.ai 创建 API Key",
+            "复制后回填到 FAL_API_KEY",
+        ],
+    },
+    "Fireworks": {
+        "url": "https://fireworks.ai/",
+        "vars": ["FIREWORKS_API_KEY"],
+        "guide": [
+            "在 Fireworks 控制台创建 API Key",
+            "复制后回填到 FIREWORKS_API_KEY",
+        ],
+    },
+    "OpenAI": {
+        "url": "https://platform.openai.com/api-keys",
+        "vars": ["OPENAI_API_KEY"],
+        "guide": [
+            "在 OpenAI 控制台创建 API Key",
+            "复制后回填到 OPENAI_API_KEY",
+        ],
+    },
+    "Replicate": {
+        "url": "https://replicate.com/account/api-tokens",
+        "vars": ["REPLICATE_API_TOKEN"],
+        "guide": [
+            "在 Replicate 创建 API token",
+            "复制后回填到 REPLICATE_API_TOKEN",
+        ],
+    },
+    "Google Generative AI": {
+        "url": "https://aistudio.google.com/app/apikey",
+        "vars": ["GOOGLE_GENERATIVE_AI_API_KEY"],
+        "guide": [
+            "在 Google AI Studio 创建 API Key",
+            "复制后回填到 GOOGLE_GENERATIVE_AI_API_KEY",
+        ],
+    },
+    "DeepSeek": {
+        "url": "https://platform.deepseek.com/api_keys",
+        "vars": ["DEEPSEEK_API_KEY"],
+        "guide": [
+            "在 DeepSeek 控制台创建 API Key",
+            "复制后回填到 DEEPSEEK_API_KEY",
+        ],
+    },
+    "OpenRouter": {
+        "url": "https://openrouter.ai/keys",
+        "vars": ["OPENROUTER_API_KEY"],
+        "guide": [
+            "在 OpenRouter 创建 API Key",
+            "复制后回填到 OPENROUTER_API_KEY",
         ],
     },
 }
@@ -291,6 +479,26 @@ def collect_group(state: Dict[str, Any], group_id: str, profile: str,
         console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
         return True
 
+    if group_id == "analytics":
+        _collect_analytics(state, schema_group, group_id, profile, console, hint)
+        console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
+        return True
+
+    if group_id == "notification":
+        _collect_notification(state, schema_group, group_id, profile, console, hint)
+        console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
+        return True
+
+    if group_id == "affiliate":
+        _collect_affiliate(state, schema_group, group_id, profile, console, hint)
+        console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
+        return True
+
+    if group_id == "ai":
+        _collect_ai(state, schema_group, group_id, profile, console, hint)
+        console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
+        return True
+
     if group_id in _GUIDED_GROUPS:
         _collect_guided(state, schema_group, group_id, profile, console, hint)
         console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
@@ -335,6 +543,168 @@ def _collect_guided(state: Dict[str, Any], schema_group: Dict[str, Any],
             console.print(f"  {i}: {step}")
 
     _collect_profile(state, schema_group, group_id, profile, console, hint)
+
+
+def _guess_provider(existing: Dict[str, Any], providers: Dict[str, Dict[str, Any]]) -> str | None:
+    """根据已有字段推断当前已选择的 provider。"""
+    for provider_name, info in providers.items():
+        for var_name in info["vars"]:
+            value = (existing.get(var_name, {}).get("value") or "").strip()
+            if value:
+                return provider_name
+    return None
+
+
+def _collect_provider_subset(
+    state: Dict[str, Any],
+    schema_group: Dict[str, Any],
+    group_id: str,
+    profile: str,
+    console: Console,
+    hint: str,
+    providers: Dict[str, Dict[str, Any]],
+    choose_prompt: str,
+    none_label: str,
+    none_message: str,
+    guide_intro: str,
+) -> None:
+    """通用 provider 选择式采集：先选 provider，再仅采集其字段。"""
+    existing = _existing_group(state, group_id, profile)
+    summary = schema_group.get("description", group_id)
+    provider_names = list(providers.keys())
+    options = [none_label] + provider_names
+    selected_provider = _guess_provider(existing, providers)
+    default_choice = 1
+    if selected_provider in provider_names:
+        default_choice = provider_names.index(selected_provider) + 2
+
+    console.print(f"采集 {group_id}/{profile}（{summary}，{hint}）：先选择方案，再配置对应字段")
+    choice = console.choose(choose_prompt, options, default=default_choice)
+    if choice == 1:
+        state["profiles"][profile]["env_groups"][group_id] = {}
+        console.print(none_message)
+        return
+
+    provider_name = provider_names[choice - 2]
+    info = providers[provider_name]
+    apply_url = info.get("url")
+    guide = info.get("guide", [])
+    var_by_name = {v["name"]: v for v in schema_group["variables"]}
+
+    console.print(f"\n已选择方案：{provider_name}")
+    if apply_url:
+        try:
+            webbrowser.open(apply_url)
+        except Exception:  # noqa: BLE001 - 打不开浏览器不致命
+            console.print(f"（浏览器未自动打开，请手动访问：{apply_url}）")
+    if guide:
+        console.print(guide_intro)
+        for step in guide:
+            console.print(f"  - {step}")
+
+    new_group: Dict[str, Any] = {}
+    for var_name in info["vars"]:
+        var = var_by_name[var_name]
+        current = _current_value(var, existing, profile)
+        value = _collect_one(console, var, current)
+        if not value:
+            source = "default" if _schema_default(var, profile) else "prompt"
+        elif value == current and current:
+            prev_source = existing.get(var_name, {}).get("source")
+            if prev_source:
+                source = prev_source
+            elif value == _schema_default(var, profile):
+                source = "default"
+            else:
+                source = "prompt"
+        else:
+            source = "prompt"
+        new_group[var_name] = {
+            "value": value,
+            "source": source,
+            "required": bool(var.get("required")),
+            "description": var.get("description", ""),
+        }
+        if var.get("sensitive"):
+            new_group[var_name]["sensitive"] = True
+
+    state["profiles"][profile]["env_groups"][group_id] = new_group
+
+
+def _collect_analytics(
+    state: Dict[str, Any],
+    schema_group: Dict[str, Any],
+    group_id: str,
+    profile: str,
+    console: Console,
+    hint: str,
+) -> None:
+    """analytics 分组采集：先选统计 provider，再仅采集对应字段。"""
+    _collect_provider_subset(
+        state, schema_group, group_id, profile, console, hint,
+        providers=_ANALYTICS_PROVIDERS,
+        choose_prompt="请选择统计方案",
+        none_label="暂不启用统计",
+        none_message="已选择暂不启用统计；analytics 分组将保持为空",
+        guide_intro="请先在浏览器完成统计平台配置，再回填以下字段：",
+    )
+
+
+def _collect_notification(
+    state: Dict[str, Any],
+    schema_group: Dict[str, Any],
+    group_id: str,
+    profile: str,
+    console: Console,
+    hint: str,
+) -> None:
+    """notification 分组采集：先选通知渠道，再仅采集对应字段。"""
+    _collect_provider_subset(
+        state, schema_group, group_id, profile, console, hint,
+        providers=_NOTIFICATION_PROVIDERS,
+        choose_prompt="请选择通知渠道",
+        none_label="暂不启用通知",
+        none_message="已选择暂不启用通知；notification 分组将保持为空",
+        guide_intro="请先在浏览器完成通知渠道配置，再回填以下字段：",
+    )
+
+
+def _collect_affiliate(
+    state: Dict[str, Any],
+    schema_group: Dict[str, Any],
+    group_id: str,
+    profile: str,
+    console: Console,
+    hint: str,
+) -> None:
+    """affiliate 分组采集：先选联盟 provider，再仅采集对应字段。"""
+    _collect_provider_subset(
+        state, schema_group, group_id, profile, console, hint,
+        providers=_AFFILIATE_PROVIDERS,
+        choose_prompt="请选择联盟平台",
+        none_label="暂不启用联盟分销",
+        none_message="已选择暂不启用联盟分销；affiliate 分组将保持为空",
+        guide_intro="请先在浏览器完成联盟平台配置，再回填以下字段：",
+    )
+
+
+def _collect_ai(
+    state: Dict[str, Any],
+    schema_group: Dict[str, Any],
+    group_id: str,
+    profile: str,
+    console: Console,
+    hint: str,
+) -> None:
+    """ai 分组采集：先选 AI provider，再仅采集对应字段。"""
+    _collect_provider_subset(
+        state, schema_group, group_id, profile, console, hint,
+        providers=_AI_PROVIDERS,
+        choose_prompt="请选择 AI Provider",
+        none_label="暂不启用 AI",
+        none_message="已选择暂不启用 AI；ai 分组将保持为空",
+        guide_intro="请先在浏览器完成 AI 平台配置，再回填以下字段：",
+    )
 
 
 def _profile_base_url(state: Dict[str, Any], profile: str) -> str:
@@ -385,11 +755,11 @@ def _collect_database(state: Dict[str, Any], schema_group: Dict[str, Any],
                 console.print("已取消，未写入（回到分组菜单）")
                 return False
             continue  # 重新输入
-        return _write_database(state, schema_group, group_id, profile, console, value)
+        return _write_database(state, schema_group, group_id, profile, value)
 
 
 def _write_database(state: Dict[str, Any], schema_group: Dict[str, Any],
-                    group_id: str, profile: str, console: Console, value: str) -> bool:
+                    group_id: str, profile: str, value: str) -> bool:
     """写入 database 分组单个 DATABASE_URL 值。"""
     existing = _existing_group(state, group_id, profile)
     var = next(v for v in schema_group["variables"] if v["name"] == "DATABASE_URL")

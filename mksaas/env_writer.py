@@ -11,6 +11,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict, List
 
+from mksaas.groups import group_summary
 from mksaas.schema import load_schema
 from mksaas.secrets_gen import gen_better_auth_secret
 
@@ -70,12 +71,23 @@ def rebuild_envs(state: Dict[str, Any], schema: List[Dict[str, Any]],
         for g in schema:
             group_id = g["id"]
             collected = groups.setdefault(group_id, {})
+            # 分组注释标题：每个步骤分组之间空一行
+            try:
+                title = group_summary(group_id)
+            except KeyError:
+                title = group_id
+            if lines:
+                lines.append("")  # 组间空行
+            lines.append(f"# {'=' * 4} {title} {'=' * 4}")
             for var in g["variables"]:
                 name = var["name"]
                 value = _resolve_value(var, collected, profile, state, group_id)
                 if not value and var.get("required"):
                     miss.append(name)
                     continue  # 必填缺失不写入
+                desc = var.get("description", "").strip()
+                if desc:
+                    lines.append(f"# {desc}")
                 lines.append(f"{name}={value}")
         missing[profile] = miss
         out = env_dir / _PROFILE_FILE[profile]

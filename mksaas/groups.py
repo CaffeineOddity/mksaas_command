@@ -1,14 +1,14 @@
 """mksaas.groups — 分组标识符连字符↔下划线映射与固定顺序。
 
 REQUIREMENTS §5.2：group key 用下划线，CLI 命令用连字符，二者一一映射；
-CLI 与 apply 遍历顺序固定为 01~18 文档序号。
+CLI 与 apply 遍历顺序固定为 env 分组文档定义顺序。
 """
 
 from __future__ import annotations
 
 from typing import List
 
-# 固定顺序（与 docs/env-groups/01~18 一致），同时也是映射基准。
+# 固定顺序（与 env 分组文档顺序一致），同时也是映射基准。
 _GROUP_ORDER: List[str] = [
     "core",
     "database",
@@ -19,7 +19,6 @@ _GROUP_ORDER: List[str] = [
     "newsletter",
     "storage",
     "payment",
-    "configurations",
     "analytics",
     "notification",
     "affiliate",
@@ -66,7 +65,6 @@ GROUP_SUMMARIES = {
     "newsletter": "订阅与 Newsletter 配置（Beehiiv）",
     "storage": "对象存储配置",
     "payment": "支付配置",
-    "configurations": "通用业务开关与运行配置",
     "analytics": "统计分析配置",
     "notification": "通知渠道配置",
     "affiliate": "联盟分销配置",

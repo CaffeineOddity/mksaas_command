@@ -49,10 +49,10 @@ mksaas <command> ...
 |---|---|
 | `mksaas init` | 全流程编排器，串行引导 `project → env <group> × N → apply`，可重复执行、按已有进度续跑 |
 | `mksaas project` | 采集项目与仓库信息，就位本地工作目录（clone / 绑定 remote），不推送 |
-| `mksaas env <group> [--profile test\|prod]` | 采集并更新单个环境分组。17 个分组见 `mksaas env --help` |
+| `mksaas env <group> [--profile test\|prod]` | 采集并更新单个环境分组。16 个分组见 `mksaas env --help` |
 | `mksaas apply` | 根据状态文件统一重建 `.env.test` / `.env.prod`，同步根 `.env`，并按策略推送 |
 
-环境分组（`<group>`，kebab-case）：`core` `database` `better-auth` `github-oauth` `google-oauth` `email-newsletter` `storage` `payment` `configurations` `analytics` `notification` `affiliate` `captcha` `crisp` `cron-jobs` `ai` `firecrawl`。变量全集见 `docs/env-schema.yaml`。
+环境分组（`<group>`，kebab-case）：`core` `database` `better-auth` `github-oauth` `google-oauth` `email` `newsletter` `storage` `payment` `analytics` `notification` `affiliate` `captcha` `crisp` `cron-jobs` `ai` `firecrawl`。变量全集见 `docs/env-schema.yaml`。
 
 ### 交付命令
 

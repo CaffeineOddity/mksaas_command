@@ -158,7 +158,7 @@
 2. `id` 即为状态文件 `profiles.<profile>.env_groups` 下的 group key，以及 `steps.init.env_groups_processed/skipped` 列表中的元素
 3. CLI 命令中的 group 参数使用连字符形式（`github-oauth`、`cron-jobs`、`better-auth`），CLI 内部负责连字符 ↔ 下划线的双向映射
 4. `docs/steps/03-env-groups/` 文件名采用 `<序号>-<连字符形式>.md`，序号仅用于文档排序，不参与运行时映射
-5. CLI 与 apply 遍历分组的顺序固定为 `01~18` 的文档序号顺序，与 group key 的字母序无关
+5. CLI 与 apply 遍历分组的顺序固定为 env 分组文档定义顺序，与 group key 的字母序无关
 6. 状态文件中只允许出现规范 group key，禁止混用连字符形式
 
 完整映射表见 `docs/steps/03-env-groups/` 各文档与 §5.1 的分组清单。
@@ -198,15 +198,14 @@
 7. [Newsletter](docs/steps/03-env-groups/07-newsletter.md)
 8. [Storage](docs/steps/03-env-groups/08-storage.md)
 9. [Payment](docs/steps/03-env-groups/09-payment.md)
-10. [Configurations](docs/steps/03-env-groups/10-configurations.md)
-11. [Analytics](docs/steps/03-env-groups/11-analytics.md)
-12. [Notification](docs/steps/03-env-groups/12-notification.md)
-13. [Affiliate](docs/steps/03-env-groups/13-affiliate.md)
-14. [Captcha](docs/steps/03-env-groups/14-captcha.md)
-15. [Crisp](docs/steps/03-env-groups/15-crisp.md)
-16. [Cron Jobs](docs/steps/03-env-groups/16-cron-jobs.md)
-17. [AI](docs/steps/03-env-groups/17-ai.md)
-18. [Firecrawl](docs/steps/03-env-groups/18-firecrawl.md)
+10. [Analytics](docs/steps/03-env-groups/11-analytics.md)
+11. [Notification](docs/steps/03-env-groups/12-notification.md)
+12. [Affiliate](docs/steps/03-env-groups/13-affiliate.md)
+13. [Captcha](docs/steps/03-env-groups/14-captcha.md)
+14. [Crisp](docs/steps/03-env-groups/15-crisp.md)
+15. [Cron Jobs](docs/steps/03-env-groups/16-cron-jobs.md)
+16. [AI](docs/steps/03-env-groups/17-ai.md)
+17. [Firecrawl](docs/steps/03-env-groups/18-firecrawl.md)
 
 要求：
 
@@ -227,15 +226,14 @@
 7. `mksaas env newsletter [--profile test|prod]`
 8. `mksaas env storage [--profile test|prod]`
 9. `mksaas env payment [--profile test|prod]`
-10. `mksaas env configurations [--profile test|prod]`
-11. `mksaas env analytics [--profile test|prod]`
-12. `mksaas env notification [--profile test|prod]`
-13. `mksaas env affiliate [--profile test|prod]`
-14. `mksaas env captcha [--profile test|prod]`
-15. `mksaas env crisp [--profile test|prod]`
-16. `mksaas env cron-jobs [--profile test|prod]`
-17. `mksaas env ai [--profile test|prod]`
-18. `mksaas env firecrawl [--profile test|prod]`
+10. `mksaas env analytics [--profile test|prod]`
+11. `mksaas env notification [--profile test|prod]`
+12. `mksaas env affiliate [--profile test|prod]`
+13. `mksaas env captcha [--profile test|prod]`
+14. `mksaas env crisp [--profile test|prod]`
+15. `mksaas env cron-jobs [--profile test|prod]`
+16. `mksaas env ai [--profile test|prod]`
+17. `mksaas env firecrawl [--profile test|prod]`
 
 `--profile` 规则：
 

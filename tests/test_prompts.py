@@ -130,3 +130,105 @@ def test_collect_database_manual_skip_provider(tmp_path, monkeypatch):
     assert opened == []
     val = s["profiles"]["test"]["env_groups"]["database"]["DATABASE_URL"]
     assert val["value"] == "postgresql://manual.example/db"
+
+
+def test_collect_analytics_only_selected_provider(tmp_path, monkeypatch):
+    """analytics 先选 provider，再只采集对应字段。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=暂不启用，2=Google Analytics，3=Umami
+    c = FakeConsole(inputs=["3", "umami-site-id", ""])
+    changed = prompts.collect_group(s, "analytics", "test", c)
+    assert changed is True
+    assert opened == ["https://cloud.umami.is/"]
+    grp = s["profiles"]["test"]["env_groups"]["analytics"]
+    assert grp["NEXT_PUBLIC_UMAMI_WEBSITE_ID"]["value"] == "umami-site-id"
+    assert grp["NEXT_PUBLIC_UMAMI_SCRIPT"]["value"] == "https://cloud.umami.is/script.js"
+    assert grp["NEXT_PUBLIC_UMAMI_SCRIPT"]["source"] == "default"
+    assert "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID" not in grp
+    assert "NEXT_PUBLIC_POSTHOG_KEY" not in grp
+
+
+def test_collect_analytics_switch_provider_clears_old_fields(tmp_path, monkeypatch):
+    """analytics 切换 provider 时，旧 provider 字段应被清理。"""
+    s = _fresh_state()
+    s["profiles"]["test"]["env_groups"]["analytics"] = {
+        "NEXT_PUBLIC_UMAMI_WEBSITE_ID": {
+            "value": "old-umami",
+            "source": "prompt",
+            "required": False,
+            "description": "Umami website ID",
+        },
+        "NEXT_PUBLIC_UMAMI_SCRIPT": {
+            "value": "https://cloud.umami.is/script.js",
+            "source": "default",
+            "required": False,
+            "description": "Umami script URL",
+        },
+    }
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: None)
+    # 10=Clarity
+    c = FakeConsole(inputs=["10", "clarity-123"])
+    changed = prompts.collect_group(s, "analytics", "test", c)
+    assert changed is True
+    grp = s["profiles"]["test"]["env_groups"]["analytics"]
+    assert grp["NEXT_PUBLIC_CLARITY_PROJECT_ID"]["value"] == "clarity-123"
+    assert "NEXT_PUBLIC_UMAMI_WEBSITE_ID" not in grp
+    assert "NEXT_PUBLIC_UMAMI_SCRIPT" not in grp
+
+
+def test_collect_notification_only_selected_channel(tmp_path, monkeypatch):
+    """notification 先选渠道，再只采集对应 webhook。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=暂不启用，2=Discord，3=Feishu
+    c = FakeConsole(inputs=["3"], secrets=["https://open.feishu.cn/webhook/abc"])
+    changed = prompts.collect_group(s, "notification", "test", c)
+    assert changed is True
+    assert opened == ["https://open.feishu.cn/document/client-docs/bot-v3/add-custom-bot"]
+    grp = s["profiles"]["test"]["env_groups"]["notification"]
+    assert grp["FEISHU_WEBHOOK_URL"]["value"] == "https://open.feishu.cn/webhook/abc"
+    assert grp["FEISHU_WEBHOOK_URL"]["sensitive"] is True
+    assert "DISCORD_WEBHOOK_URL" not in grp
+
+
+def test_collect_affiliate_only_selected_provider(tmp_path, monkeypatch):
+    """affiliate 先选 provider，再只采集对应公开 ID。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=暂不启用，2=Affonso，3=PromoteKit
+    c = FakeConsole(inputs=["2", "affonso-public-id"])
+    changed = prompts.collect_group(s, "affiliate", "test", c)
+    assert changed is True
+    assert opened == ["https://affonso.io/"]
+    grp = s["profiles"]["test"]["env_groups"]["affiliate"]
+    assert grp["NEXT_PUBLIC_AFFILIATE_AFFONSO_ID"]["value"] == "affonso-public-id"
+    assert "NEXT_PUBLIC_AFFILIATE_PROMOTEKIT_ID" not in grp
+
+
+def test_collect_ai_switch_provider_clears_old_fields(tmp_path, monkeypatch):
+    """ai 切换 provider 时，旧 provider 密钥应被清理。"""
+    s = _fresh_state()
+    s["profiles"]["test"]["env_groups"]["ai"] = {
+        "OPENAI_API_KEY": {
+            "value": "old-openai-key",
+            "source": "prompt",
+            "required": False,
+            "description": "OpenAI API key",
+            "sensitive": True,
+        }
+    }
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=暂不启用，2=AI Gateway，3=FAL，4=Fireworks，5=OpenAI，6=Replicate，7=Google Generative AI
+    c = FakeConsole(inputs=["7"], secrets=["gemini-key-123"])
+    changed = prompts.collect_group(s, "ai", "test", c)
+    assert changed is True
+    assert opened == ["https://aistudio.google.com/app/apikey"]
+    grp = s["profiles"]["test"]["env_groups"]["ai"]
+    assert grp["GOOGLE_GENERATIVE_AI_API_KEY"]["value"] == "gemini-key-123"
+    assert grp["GOOGLE_GENERATIVE_AI_API_KEY"]["sensitive"] is True
+    assert "OPENAI_API_KEY" not in grp

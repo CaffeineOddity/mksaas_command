@@ -34,7 +34,7 @@ mksaas init
 2. `mksaas env <group> [--profile test|prod]`：逐个采集环境分组，每个分组都可确认或跳过
 3. `mksaas apply`：统一执行落地，apply 前停一次确认
 
-被编排的 env 分组顺序与 `docs/steps/03-env-groups/01~18` 一致，用户可跳过任意分组。
+被编排的 env 分组顺序与 `docs/steps/03-env-groups/` 中当前保留的分组文档顺序一致，用户可跳过任意分组。
 
 ## 4. 两种使用方式
 

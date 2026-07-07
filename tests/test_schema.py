@@ -5,12 +5,12 @@ import pytest
 from mksaas.schema import SchemaError, find_group, load_schema
 
 
-def test_load_schema_returns_18_groups_in_order():
+def test_load_schema_returns_17_groups_in_order():
     groups = load_schema()
     ids = [g["id"] for g in groups]
     assert ids == [
         "core", "database", "better_auth", "github_oauth", "google_oauth",
-        "email", "newsletter", "storage", "payment", "configurations", "analytics",
+        "email", "newsletter", "storage", "payment", "analytics",
         "notification", "affiliate", "captcha", "crisp", "cron_jobs", "ai",
         "firecrawl",
     ]

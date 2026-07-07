@@ -211,20 +211,6 @@
             "description": "Stripe credits enterprise price ID"
           }
         },
-        "configurations": {
-          "DISABLE_IMAGE_OPTIMIZATION": {
-            "value": "false",
-            "source": "default",
-            "required": false,
-            "description": "Disable image optimization"
-          },
-          "NEXT_PUBLIC_DEMO_WEBSITE": {
-            "value": "false",
-            "source": "default",
-            "required": false,
-            "description": "Run as demo website"
-          }
-        },
         "analytics": {
           "NEXT_PUBLIC_GOOGLE_ANALYTICS_ID": {
             "value": "",

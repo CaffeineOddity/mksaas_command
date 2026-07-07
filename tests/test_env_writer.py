@@ -35,7 +35,20 @@ def test_rebuild_uses_schema_default_when_uncollected(tmp_path):
     env_writer.rebuild_envs(s, load_schema(), tmp_path)
     env_test = (tmp_path / ".mksaas" / ".env.test").read_text()
     assert "STORAGE_REGION=auto" in env_test
-    assert "DISABLE_IMAGE_OPTIMIZATION=false" in env_test
+
+
+def test_rebuild_writes_group_comments_and_blank_lines(tmp_path):
+    """每个分组有注释标题，组间空一行，变量行带描述注释。"""
+    s = state.init_default()
+    env_writer.rebuild_envs(s, load_schema(), tmp_path)
+    env_test = (tmp_path / ".mksaas" / ".env.test").read_text()
+    # 分组标题
+    assert "# ==== 数据库连接 ====" in env_test
+    assert "# ==== 认证密钥与鉴权核心配置 ====" in env_test
+    # 变量描述注释在 key 的上一行
+    assert "# Storage region\nSTORAGE_REGION=auto" in env_test
+    # 组间空行：标题行之间至少有一个空行分隔
+    assert "\n\n# ==== 认证密钥" in env_test
 
 
 def test_rebuild_empty_string_when_no_default_optional(tmp_path):
