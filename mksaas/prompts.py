@@ -169,6 +169,17 @@ _ANALYTICS_PROVIDERS = {
             "复制实例 Host 到 NEXT_PUBLIC_POSTHOG_HOST，例如 https://us.i.posthog.com",
         ],
     },
+    "Vercel Analytics": {
+        "url": "https://vercel.com/dashboard",
+        "vars": [],
+        "guide": [
+            "无需 env 变量，通过 config 开关启用",
+            "进入 Vercel 控制台 → 项目 → Analytics → Web Analytics → Enable",
+            "进入 Vercel 控制台 → 项目 → Analytics → Speed Insights → Enable",
+            "在 src/config/website.tsx 设置 enableVercelAnalytics: true",
+            "（可选）设置 enableSpeedInsights: true",
+        ],
+    },
     "Clarity": {
         "url": "https://clarity.microsoft.com/",
         "vars": ["NEXT_PUBLIC_CLARITY_PROJECT_ID"],
@@ -280,6 +291,30 @@ _AI_PROVIDERS = {
         "guide": [
             "在 OpenRouter 创建 API Key",
             "复制后回填到 OPENROUTER_API_KEY",
+        ],
+    },
+}
+
+# newsletter 提供商：名称 → 官网 / provider 开关值 / 该提供商需采集的变量 / 创建步骤
+# 选定后仅采集该提供商变量，NEWSLETTER_PROVIDER 自动写入。
+_NEWSLETTER_PROVIDERS = {
+    "Resend": {
+        "url": "https://resend.com/",
+        "provider_value": "resend",
+        "vars": [],
+        "guide": lambda base: [
+            "Resend 的 API Key 已在 email 分组采集（RESEND_API_KEY），无需重复输入",
+            "确认 email 分组已配置 RESEND_API_KEY 即可",
+        ],
+    },
+    "Beehiiv": {
+        "url": "https://beehiiv.com/",
+        "provider_value": "beehiiv",
+        "vars": ["BEEHIIV_API_KEY", "BEEHIIV_PUBLICATION_ID"],
+        "guide": lambda _: [
+            "在 Beehiiv 创建账户",
+            "Settings → API → 生成 API Key → BEEHIIV_API_KEY",
+            "从 URL 或设置页获取 Publication ID → BEEHIIV_PUBLICATION_ID",
         ],
     },
 }
@@ -419,14 +454,15 @@ def _collect_one(console: Console, var: Dict[str, Any], current: str) -> str:
     """
     name = var["name"]
     sensitive = bool(var.get("sensitive"))
+    generate = bool(var.get("generate_if_empty"))
     prompt = _format_prompt(var, current)
+    suffix = " 留空自动生成" if generate else " 留空保留"
 
     while True:
         if sensitive:
-            # 敏感字段：getpass 预填当前值（questionary 隐藏输入），留空返回 current
-            value = console.getpass(prompt + " 留空保留", default=current)
+            value = console.getpass(prompt + suffix, default=current)
         else:
-            value = console.input(prompt + " 留空保留", default=current)
+            value = console.input(prompt + suffix, default=current)
         value = (value or "").strip()
 
         # 留空（含 current 为空）即跳过：不在采集时强制必填，必填缺失由 apply 阶段拦截
@@ -505,6 +541,11 @@ def collect_group(state: Dict[str, Any], group_id: str, profile: str,
 
     if group_id == "payment":
         _collect_payment(state, schema_group, group_id, profile, console, hint)
+        console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
+        return True
+
+    if group_id == "newsletter":
+        _collect_newsletter(state, schema_group, group_id, profile, console, hint)
         console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
         return True
 
@@ -755,6 +796,86 @@ def _collect_database(state: Dict[str, Any], schema_group: Dict[str, Any],
         none_message="已选择暂不配置数据库；database 分组将保持为空",
         guide_intro="请先在浏览器完成数据库平台配置，再回填以下字段：",
     )
+
+
+def _collect_newsletter(state: Dict[str, Any], schema_group: Dict[str, Any],
+                        group_id: str, profile: str, console: Console, hint: str) -> None:
+    """newsletter 分组采集：选 Resend / Beehiiv → 打开对应控制台 → 打印创建步骤
+    → 仅采集所选提供商变量 → NEWSLETTER_PROVIDER 自动写入。
+
+    选「跳过/手动输入」则走完整 _collect_profile。
+    """
+    console.print(f"采集 {group_id}/{profile}（{schema_group.get('description', group_id)}，{hint}）")
+    names = list(_NEWSLETTER_PROVIDERS.keys())
+    provider_idx = console.choose("选择 Newsletter 方案", names + ["跳过/手动输入"],
+                                  default=len(names) + 1)
+    if provider_idx > len(names):
+        console.print("手动采集全部 newsletter 变量")
+        _collect_profile(state, schema_group, group_id, profile, console, hint)
+        return
+
+    provider = names[provider_idx - 1]
+    info = _NEWSLETTER_PROVIDERS[provider]
+    url = info["url"]
+    console.print(f"已选择 {provider}，正在打开 {url}")
+    open_success = False
+    try:
+        webbrowser.open(url)
+        open_success = True
+    except Exception:  # noqa: BLE001
+        console.print(f"（浏览器未自动打开，请手动访问：{url}）")
+
+    if open_success:
+        console.print("\n创建步骤：")
+        for i, step in enumerate(info["guide"](None), start=1):
+            console.print(f"  {i}: {step}")
+
+    # 仅采集所选提供商变量 + 自动写入 NEWSLETTER_PROVIDER
+    existing = _existing_group(state, group_id, profile)
+    var_by_name = {v["name"]: v for v in schema_group["variables"]}
+    wanted = list(info["vars"]) + ["NEWSLETTER_PROVIDER"]
+    new_group: Dict[str, Any] = {}
+    for name in wanted:
+        var = var_by_name.get(name)
+        if var is None:
+            continue
+        if name == "NEWSLETTER_PROVIDER":
+            value = info["provider_value"]
+            source = "prompt"
+        else:
+            current = _current_value(var, existing, profile)
+            value = _collect_one(console, var, current)
+            if not value and var.get("generate_if_empty"):
+                if console.confirm(f"  {name} 是否自动生成？", default=True):
+                    value = gen_better_auth_secret()
+                    source = "prompt_or_generate"
+                else:
+                    source = "default"
+            elif not value:
+                source = "default" if _schema_default(var, profile) else "prompt"
+            elif value == current and current:
+                prev_source = existing.get(name, {}).get("source")
+                if prev_source:
+                    source = prev_source
+                elif value == _schema_default(var, profile):
+                    source = "default"
+                else:
+                    source = "prompt"
+            else:
+                source = "prompt"
+        field = {
+            "value": value,
+            "source": source,
+            "required": bool(var.get("required")),
+            "description": var.get("description", ""),
+        }
+        if var.get("sensitive"):
+            field["sensitive"] = True
+        if var.get("generate_if_empty"):
+            field["generate_if_empty"] = True
+        new_group[name] = field
+
+    state["profiles"][profile]["env_groups"][group_id] = new_group
 
 
 def _collect_payment(state: Dict[str, Any], schema_group: Dict[str, Any],

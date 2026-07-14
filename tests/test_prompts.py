@@ -157,8 +157,8 @@ def test_collect_analytics_switch_provider_clears_old_fields(tmp_path, monkeypat
         },
     }
     monkeypatch.setattr(prompts.webbrowser, "open", lambda url: None)
-    # 10=Clarity
-    c = FakeConsole(inputs=["10", "clarity-123"])
+    # 11=Clarity（Vercel Analytics 在第 10 位）
+    c = FakeConsole(inputs=["11", "clarity-123"])
     changed = prompts.collect_group(s, "analytics", "test", c)
     assert changed is True
     grp = s["profiles"]["test"]["env_groups"]["analytics"]
@@ -221,3 +221,50 @@ def test_collect_ai_switch_provider_clears_old_fields(tmp_path, monkeypatch):
     assert grp["GOOGLE_GENERATIVE_AI_API_KEY"]["value"] == "gemini-key-123"
     assert grp["GOOGLE_GENERATIVE_AI_API_KEY"]["sensitive"] is True
     assert "OPENAI_API_KEY" not in grp
+
+
+def test_collect_newsletter_resend_writes_provider(tmp_path, monkeypatch):
+    """newsletter 选 Resend → 打开网页 → 自动写 NEWSLETTER_PROVIDER=resend，无额外变量。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=Resend，2=Beehiiv，3=跳过/手动输入
+    c = FakeConsole(inputs=["1"])
+    changed = prompts.collect_group(s, "newsletter", "test", c)
+    assert changed is True
+    assert opened == ["https://resend.com/"]
+    grp = s["profiles"]["test"]["env_groups"]["newsletter"]
+    assert grp["NEWSLETTER_PROVIDER"]["value"] == "resend"
+    assert grp["NEWSLETTER_PROVIDER"]["source"] == "prompt"
+    assert "BEEHIIV_API_KEY" not in grp
+    assert "BEEHIIV_PUBLICATION_ID" not in grp
+
+
+def test_collect_newsletter_beehiiv_writes(tmp_path, monkeypatch):
+    """newsletter 选 Beehiiv → 打开网页 → 采集 BEEHIIV_API_KEY + PUBLICATION_ID + 自动写 provider。"""
+    s = _fresh_state()
+    opened = []
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: opened.append(url))
+    # 1=Resend，2=Beehiiv，3=跳过/手动输入 → BEEHIIV_API_KEY（敏感=secrets），BEEHIIV_PUBLICATION_ID（普通=inputs）
+    c = FakeConsole(inputs=["2", "pub-123"], secrets=["beehiiv-key-abc"])
+    changed = prompts.collect_group(s, "newsletter", "test", c)
+    assert changed is True
+    assert opened == ["https://beehiiv.com/"]
+    grp = s["profiles"]["test"]["env_groups"]["newsletter"]
+    assert grp["NEWSLETTER_PROVIDER"]["value"] == "beehiiv"
+    assert grp["BEEHIIV_API_KEY"]["value"] == "beehiiv-key-abc"
+    assert grp["BEEHIIV_PUBLICATION_ID"]["value"] == "pub-123"
+
+
+def test_collect_newsletter_skip_falls_back_to_full_profile(tmp_path, monkeypatch):
+    """newsletter 选跳过 → 回退到完整 _collect_profile 采集全部变量。"""
+    s = _fresh_state()
+    monkeypatch.setattr(prompts.webbrowser, "open", lambda url: None)
+    # 3=跳过/手动输入，走完整 profile → 3 个变量：NEWSLETTER_PROVIDER（普通），BEEHIIV_API_KEY（敏感），BEEHIIV_PUBLICATION_ID（普通）
+    c = FakeConsole(inputs=["3", "resend", "pub-123"], secrets=["sk-beehiiv"])
+    changed = prompts.collect_group(s, "newsletter", "test", c)
+    assert changed is True
+    grp = s["profiles"]["test"]["env_groups"]["newsletter"]
+    assert grp["NEWSLETTER_PROVIDER"]["value"] == "resend"
+    assert grp["BEEHIIV_API_KEY"]["value"] == "sk-beehiiv"
+    assert grp["BEEHIIV_PUBLICATION_ID"]["value"] == "pub-123"

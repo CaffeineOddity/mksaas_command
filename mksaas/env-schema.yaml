@@ -99,7 +99,15 @@ groups:
 
   - id: newsletter
     order: 7
+    description: Newsletter 订阅配置
     variables:
+      - name: NEWSLETTER_PROVIDER
+        required: false
+        test_default: ""
+        prod_default: ""
+        generate_if_empty: false
+        sensitive: false
+        description: newsletter 提供商（resend / beehiiv）
       - name: BEEHIIV_API_KEY
         required: false
         test_default: ""
