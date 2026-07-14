@@ -333,6 +333,17 @@ _GUIDED_GROUPS = {
             "- STORAGE_ENDPOINT: 为 S3 客户端使用管辖权地特定的终结点: 形如 https://<account-id>.r2.cloudflarestorage.com",
         ],
     },
+    "captcha": {
+        "apply_url": "https://dash.cloudflare.com/?to=/:account/turnstile",
+        "guide": lambda base: [
+            "登录 Cloudflare 控制台，选择账户",
+            "左侧菜单 → Turnstile → 添加 Widget",
+            "输入站点名称，域名填写你的网站域名（本地开发可填 localhost）",
+            "Widget Mode 选择 Managed",
+            "创建后复制 Site Key → NEXT_PUBLIC_TURNSTILE_SITE_KEY",
+            "复制 Secret Key → TURNSTILE_SECRET_KEY",
+        ],
+    },
 }
 
 

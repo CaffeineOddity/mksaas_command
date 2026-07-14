@@ -403,6 +403,7 @@ groups:
 
   - id: captcha
     order: 14
+    description: Cloudflare Turnstile 人机验证
     variables:
       - name: NEXT_PUBLIC_TURNSTILE_SITE_KEY
         required: false
