@@ -22,10 +22,26 @@ _URL_VARS = {"NEXT_PUBLIC_BASE_URL"}
 
 _URL_RE = re.compile(r"^https?://[^\s]+$")
 
-# database 提供商：名称 → 官网（采集时打开，引导用户创建项目）
+# database 提供商：名称 → 官网 / vars / 创建步骤
 _DB_PROVIDERS = {
-    "Neon": "https://neon.com/",
-    "Supabase": "https://supabase.com/",
+    "Neon": {
+        "url": "https://neon.com/",
+        "vars": ["DATABASE_URL"],
+        "guide": [
+            "在 Neon 创建项目（或使用已有项目）",
+            "在 Dashboard 找到 Connection string（形如 postgresql://...）",
+            "复制后回填到 DATABASE_URL",
+        ],
+    },
+    "Supabase": {
+        "url": "https://supabase.com/",
+        "vars": ["DATABASE_URL"],
+        "guide": [
+            "在 Supabase 创建项目（或使用已有项目）",
+            "进入 Settings > Database > Connection string",
+            "复制 URI 连接串（形如 postgresql://...）后回填到 DATABASE_URL",
+        ],
+    },
 }
 
 # payment 提供商：名称 → 官网 / webhook 路径 / 该提供商需采集的变量 / provider 开关值 / 创建步骤
@@ -472,8 +488,7 @@ def collect_group(state: Dict[str, Any], group_id: str, profile: str,
     hint = "测试环境，可用 localhost/占位值" if profile == "test" else "正式环境，请填写真实域名/密钥"
 
     if group_id == "database":
-        if not _collect_database(state, schema_group, group_id, profile, console, hint):
-            return False  # 用户空输入确认，未写入
+        _collect_database(state, schema_group, group_id, profile, console, hint)
         console.print(f"分组 {group_id}/{profile} 已采集（未应用，需在 apply 阶段统一落地）")
         return True
 
@@ -719,72 +734,16 @@ def _profile_base_url(state: Dict[str, Any], profile: str) -> str:
 
 
 def _collect_database(state: Dict[str, Any], schema_group: Dict[str, Any],
-                      group_id: str, profile: str, console: Console, hint: str) -> bool:
-    """database 分组采集：选提供商 → 打开官网 → 输入 DATABASE_URL。
-
-    空输入确认后返回 False（不写入，回到分组菜单）。
-    """
-    existing = _existing_group(state, group_id, profile)
-    current = _current_value(
-        next(v for v in schema_group["variables"] if v["name"] == "DATABASE_URL"),
-        existing, profile)
-
-    console.print(f"采集 {group_id}/{profile}（{schema_group.get('description', group_id)}，{hint}）")
-    # 1. 选择数据库提供商
-    provider_idx = console.choose("选择数据库提供商", list(_DB_PROVIDERS.keys()) + ["跳过/手动输入"],
-                                  default=len(_DB_PROVIDERS) + 1)
-    if provider_idx <= len(_DB_PROVIDERS):
-        provider = list(_DB_PROVIDERS.keys())[provider_idx - 1]
-        url = _DB_PROVIDERS[provider]
-        console.print(f"已选择 {provider}，正在打开 {url}（请创建项目后获取连接串）")
-        try:
-            webbrowser.open(url)
-        except Exception:  # noqa: BLE001 - 非交互环境打不开浏览器不致命
-            console.print(f"（浏览器未自动打开，请手动访问：{url}）")
-        console.print("在控制台找到 Connection string（形如 postgresql://...），复制后粘贴到下方")
-    else:
-        provider = None
-        console.print("手动输入 DATABASE_URL")
-
-    # 2. 输入 DATABASE_URL（敏感，getpass 预填当前值）
-    var = next(v for v in schema_group["variables"] if v["name"] == "DATABASE_URL")
-    prompt = _format_prompt(var, current)
-    while True:
-        value = console.getpass(prompt + " 留空取消", default=current)
-        value = (value or "").strip()
-        if not value:
-            # 空输入 → 确认是否取消
-            if console.confirm("未输入 DATABASE_URL，确认放弃本次采集？", default=True):
-                console.print("已取消，未写入（回到分组菜单）")
-                return False
-            continue  # 重新输入
-        return _write_database(state, schema_group, group_id, profile, value)
-
-
-def _write_database(state: Dict[str, Any], schema_group: Dict[str, Any],
-                    group_id: str, profile: str, value: str) -> bool:
-    """写入 database 分组单个 DATABASE_URL 值。"""
-    existing = _existing_group(state, group_id, profile)
-    var = next(v for v in schema_group["variables"] if v["name"] == "DATABASE_URL")
-    current = _current_value(var, existing, profile)
-    if value == current and current:
-        prev_source = existing.get("DATABASE_URL", {}).get("source")
-        source = prev_source or ("default" if value == _schema_default(var, profile) else "prompt")
-    elif value == _schema_default(var, profile):
-        source = "default"
-    else:
-        source = "prompt"
-    new_group = {
-        "DATABASE_URL": {
-            "value": value,
-            "source": source,
-            "required": bool(var.get("required")),
-            "description": var.get("description", ""),
-            "sensitive": True,
-        }
-    }
-    state["profiles"][profile]["env_groups"][group_id] = new_group
-    return True
+                      group_id: str, profile: str, console: Console, hint: str) -> None:
+    """database 分组采集：先选数据库 provider，再仅采集对应字段。"""
+    _collect_provider_subset(
+        state, schema_group, group_id, profile, console, hint,
+        providers=_DB_PROVIDERS,
+        choose_prompt="请选择数据库方案",
+        none_label="暂不配置数据库",
+        none_message="已选择暂不配置数据库；database 分组将保持为空",
+        guide_intro="请先在浏览器完成数据库平台配置，再回填以下字段：",
+    )
 
 
 def _collect_payment(state: Dict[str, Any], schema_group: Dict[str, Any],

@@ -26,7 +26,7 @@ groups:
         prod_default: ""
         generate_if_empty: false
         sensitive: false
-        description: 应用基础 URL
+        description: web/app 应用域名URL
 
   - id: database
     order: 2

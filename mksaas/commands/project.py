@@ -186,14 +186,16 @@ def _dispatch_by_content(console: Console, project_dir: Path,
     if not already_placed:
         shutil.rmtree(project_dir, ignore_errors=True)
 
-    console.print("检测到空仓库，将用模板初始化项目目录")
-    console.print("请输入模板仓库地址：")
-    template_repo = console.input("template_repo> ").strip()
-    if not template_repo:
-        console.print("未输入模板仓库地址，已取消")
-        return 1
-    console.print("请输入模板分支（留空默认 main）：")
-    template_branch = console.input("template_branch> ").strip() or "main"
+    DEFAULT_TEMPLATE_REPO = "https://github.com/MkSaaSHQ/mksaas-template.git"
+    DEFAULT_TEMPLATE_BRANCH = "main"
+
+    console.print("[检测到空仓库，将用模板初始化项目目录]")
+    template_repo = console.input(
+        "template_repo> ", default=DEFAULT_TEMPLATE_REPO,
+    ).strip()
+    template_branch = console.input(
+        "template_branch> ", default=DEFAULT_TEMPLATE_BRANCH,
+    ).strip()
 
     if not console.confirm(
             f"将从 {template_repo} 初始化到 {project_dir}？", default=True):
