@@ -268,3 +268,43 @@ def test_collect_newsletter_skip_falls_back_to_full_profile(tmp_path, monkeypatc
     assert grp["NEWSLETTER_PROVIDER"]["value"] == "resend"
     assert grp["BEEHIIV_API_KEY"]["value"] == "sk-beehiiv"
     assert grp["BEEHIIV_PUBLICATION_ID"]["value"] == "pub-123"
+
+
+# ── 参考控制测试（smoke）──
+# 按 collect_group 代码路径拆分，改哪条路径就跑对应的那条。
+# 跑法：pytest tests/test_prompts.py -k "smoke_" -xvs   # 全部
+#       pytest tests/test_prompts.py -k "smoke_collect_profile_generic" -xvs  # 单条
+
+
+def test_smoke_collect_profile_generic():
+    """smoke: 通用 _collect_profile 路径（core 分组）。"""
+    s = _fresh_state()
+    c = FakeConsole(inputs=["https://smoke.example.com"])
+    assert prompts.collect_group(s, "core", "test", c) is True
+    assert s["profiles"]["test"]["env_groups"]["core"]["NEXT_PUBLIC_BASE_URL"]["value"] == "https://smoke.example.com"
+
+
+def test_smoke_collect_provider_subset():
+    """smoke: _collect_provider_subset 路径（database，同 analytics/notification/affiliate/ai）。"""
+    s = _fresh_state()
+    c = FakeConsole(inputs=["2"], secrets=["postgresql://smoke.example/db"])
+    assert prompts.collect_group(s, "database", "test", c) is True
+    assert s["profiles"]["test"]["env_groups"]["database"]["DATABASE_URL"]["value"] == "postgresql://smoke.example/db"
+
+
+def test_smoke_collect_custom_provider():
+    """smoke: 自定义 provider + 自动写 provider 值（newsletter，同 payment 模式）。"""
+    s = _fresh_state()
+    c = FakeConsole(inputs=["1"])
+    assert prompts.collect_group(s, "newsletter", "test", c) is True
+    assert s["profiles"]["test"]["env_groups"]["newsletter"]["NEWSLETTER_PROVIDER"]["value"] == "resend"
+
+
+def test_smoke_collect_guided():
+    """smoke: _collect_guided 路径（captcha，同 storage/email/github_oauth/google_oauth）。"""
+    s = _fresh_state()
+    c = FakeConsole(inputs=["smoke-site-key"], secrets=["smoke-secret-key"])
+    assert prompts.collect_group(s, "captcha", "test", c) is True
+    grp = s["profiles"]["test"]["env_groups"]["captcha"]
+    assert grp["NEXT_PUBLIC_TURNSTILE_SITE_KEY"]["value"] == "smoke-site-key"
+    assert grp["TURNSTILE_SECRET_KEY"]["value"] == "smoke-secret-key"
